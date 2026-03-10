@@ -1,6 +1,6 @@
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 
-import { setDevModeCache } from "~background/index"
+import { setDevModeCache } from "~lib/dev-mode-cache"
 import { getDevMode, setDevMode } from "~lib/storage"
 
 export type RequestBody = { enabled?: boolean }
