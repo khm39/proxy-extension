@@ -3,7 +3,7 @@
   "displayName": "Proxy Switcher",
   "version": "0.0.1",
   "description": "プロキシサーバーの設定と切り替えを簡単に行える Chrome 拡張機能",
-  "author": "",
+  "author": "khm39",
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
