@@ -8,6 +8,7 @@ import {
 import {
   addConnectionLog,
   getActiveProfile,
+  getDevMode,
   setLastError
 } from "~lib/storage"
 import type { ConnectionLogEntry } from "~lib/types"
@@ -35,7 +36,6 @@ chrome.runtime.onStartup.addListener(async () => {
  */
 async function restoreActiveProxy() {
   // devMode キャッシュを初期化
-  const { getDevMode } = await import("~lib/storage")
   setDevModeCache(await getDevMode())
 
   const profile = await getActiveProfile()
