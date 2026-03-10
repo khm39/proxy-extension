@@ -93,9 +93,40 @@ async function authHandler(
 }
 
 /**
+ * 設定に起因するプロキシエラーのパターン
+ * これらはプロキシサーバーの停止や設定ミスが原因であり、
+ * 拡張機能自体のエラーではないため、警告として扱う
+ */
+const CONFIG_ERROR_PATTERNS = [
+  "ERR_PROXY_CONNECTION_FAILED",
+  "ERR_PROXY_CERTIFICATE_INVALID",
+  "ERR_TUNNEL_CONNECTION_FAILED",
+  "ERR_SOCKS_CONNECTION_FAILED",
+  "ERR_SOCKS_CONNECTION_HOST_UNREACHABLE",
+  "ERR_PROXY_AUTH_UNSUPPORTED",
+  "ERR_MANDATORY_PROXY_CONFIGURATION_FAILED",
+  "ERR_NAME_NOT_RESOLVED",
+  "ERR_CONNECTION_REFUSED",
+  "ERR_CONNECTION_TIMED_OUT",
+  "ERR_CONNECTION_RESET"
+]
+
+function isConfigError(error: string): boolean {
+  return CONFIG_ERROR_PATTERNS.some((pattern) => error.includes(pattern))
+}
+
+/**
  * プロキシエラーのハンドリング
  */
 chrome.proxy.onProxyError.addListener(async (details) => {
+  if (isConfigError(details.error)) {
+    console.warn(
+      "[ProxySwitcher] Proxy configuration error:",
+      details.error
+    )
+    return
+  }
+
   console.error(
     "[ProxySwitcher] Proxy error:",
     details.error,
