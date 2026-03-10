@@ -103,24 +103,37 @@ chrome.proxy.onProxyError.addListener(async (details) => {
 })
 
 /**
+ * リクエスト情報から接続ログエントリのベースを作成する
+ */
+function createLogEntry(
+  details: chrome.webRequest.WebResponseCacheDetails | chrome.webRequest.WebResponseErrorDetails,
+  extra?: Partial<ConnectionLogEntry>
+): ConnectionLogEntry {
+  return {
+    id: `${details.requestId}-${Date.now()}`,
+    timestamp: Date.now(),
+    method: details.method,
+    url: details.url,
+    type: details.type,
+    fromCache: false,
+    ...extra
+  }
+}
+
+/**
  * 開発者モード: リクエスト完了時の接続ログ記録
  */
 chrome.webRequest.onCompleted.addListener(
   async (details) => {
     if (!getDevModeCache()) return
-
-    const entry: ConnectionLogEntry = {
-      id: `${details.requestId}-${Date.now()}`,
-      timestamp: Date.now(),
-      method: details.method,
-      url: details.url,
-      type: details.type,
-      statusCode: details.statusCode,
-      statusLine: details.statusLine,
-      ip: details.ip,
-      fromCache: details.fromCache
-    }
-    await addConnectionLog(entry)
+    await addConnectionLog(
+      createLogEntry(details, {
+        statusCode: details.statusCode,
+        statusLine: details.statusLine,
+        ip: details.ip,
+        fromCache: details.fromCache
+      })
+    )
   },
   { urls: ["<all_urls>"] }
 )
@@ -131,17 +144,9 @@ chrome.webRequest.onCompleted.addListener(
 chrome.webRequest.onErrorOccurred.addListener(
   async (details) => {
     if (!getDevModeCache()) return
-
-    const entry: ConnectionLogEntry = {
-      id: `${details.requestId}-${Date.now()}`,
-      timestamp: Date.now(),
-      method: details.method,
-      url: details.url,
-      type: details.type,
-      fromCache: false,
-      error: details.error
-    }
-    await addConnectionLog(entry)
+    await addConnectionLog(
+      createLogEntry(details, { error: details.error })
+    )
   },
   { urls: ["<all_urls>"] }
 )

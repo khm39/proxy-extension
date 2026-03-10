@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { validateProfile } from "./profile-utils"
 import type {
   AppState,
   ConnectionLogEntry,
@@ -159,52 +160,6 @@ export async function getActiveProfile(): Promise<ProxyProfile | null> {
 export async function exportProfiles(): Promise<string> {
   const profiles = await getProfiles()
   return JSON.stringify(profiles, null, 2)
-}
-
-const VALID_PROXY_TYPES = ["direct", "fixed_servers", "pac_script", "system"]
-const VALID_SCHEMES = ["http", "https", "socks4", "socks5"]
-
-/**
- * インポートされたプロファイルのバリデーション
- */
-export function validateProfile(profile: unknown): profile is ProxyProfile {
-  if (!profile || typeof profile !== "object") return false
-  const p = profile as Record<string, unknown>
-
-  if (typeof p.id !== "string" || !p.id) return false
-  if (typeof p.name !== "string" || !p.name) return false
-  if (typeof p.color !== "string") return false
-  if (typeof p.type !== "string" || !VALID_PROXY_TYPES.includes(p.type))
-    return false
-  if (!p.config || typeof p.config !== "object") return false
-  if (!Array.isArray(p.bypassList)) return false
-
-  // fixed_servers の場合、config 内の server 設定を検証
-  if (p.type === "fixed_servers") {
-    const config = p.config as Record<string, unknown>
-    const serverKeys = [
-      "singleProxy",
-      "proxyForHttp",
-      "proxyForHttps",
-      "proxyForFtp",
-      "fallbackProxy"
-    ]
-    for (const key of serverKeys) {
-      if (config[key] !== undefined) {
-        const server = config[key] as Record<string, unknown>
-        if (typeof server !== "object" || !server) return false
-        if (typeof server.host !== "string") return false
-        if (typeof server.port !== "number") return false
-        if (
-          typeof server.scheme !== "string" ||
-          !VALID_SCHEMES.includes(server.scheme)
-        )
-          return false
-      }
-    }
-  }
-
-  return true
 }
 
 /**
