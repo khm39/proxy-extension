@@ -1,5 +1,6 @@
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 
+import { setDevModeCache } from "~background/index"
 import { getDevMode, setDevMode } from "~lib/storage"
 
 export type RequestBody = { enabled?: boolean }
@@ -9,10 +10,18 @@ const handler: PlasmoMessaging.MessageHandler<
   RequestBody,
   ResponseBody
 > = async (req, res) => {
-  const enabled =
-    req.body?.enabled !== undefined ? req.body.enabled : !(await getDevMode())
-  await setDevMode(enabled)
-  res.send({ devMode: enabled })
+  try {
+    const enabled =
+      req.body?.enabled !== undefined
+        ? req.body.enabled
+        : !(await getDevMode())
+    await setDevMode(enabled)
+    setDevModeCache(enabled)
+    res.send({ devMode: enabled })
+  } catch (e) {
+    const current = await getDevMode()
+    res.send({ devMode: current })
+  }
 }
 
 export default handler

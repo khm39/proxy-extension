@@ -1,6 +1,6 @@
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 
-import { deactivateProxy, updateBadge } from "~lib/proxy-manager"
+import { deactivateProxy, setupAuthHandler, updateBadge } from "~lib/proxy-manager"
 import { setActiveProfileId, setLastError } from "~lib/storage"
 
 export type RequestBody = Record<string, never>
@@ -15,6 +15,7 @@ const handler: PlasmoMessaging.MessageHandler<
     await deactivateProxy()
     await setActiveProfileId(null)
     await updateBadge(null)
+    setupAuthHandler(null)
     res.send({ success: true })
   } catch (e) {
     res.send({ success: false, error: String(e) })

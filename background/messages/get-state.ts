@@ -10,8 +10,18 @@ const handler: PlasmoMessaging.MessageHandler<
   RequestBody,
   ResponseBody
 > = async (_req, res) => {
-  const state = await getState()
-  res.send(state)
+  try {
+    const state = await getState()
+    res.send(state)
+  } catch (e) {
+    console.error("[ProxySwitcher] Failed to get state:", e)
+    res.send({
+      profiles: [],
+      activeProfileId: null,
+      lastError: null,
+      devMode: false
+    })
+  }
 }
 
 export default handler

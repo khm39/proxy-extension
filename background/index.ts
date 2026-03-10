@@ -1,18 +1,34 @@
 import {
   applyProfile,
   deactivateProxy,
-  getAuthFromProfile,
+  setupAuthHandler,
   updateBadge
 } from "~lib/proxy-manager"
 import {
   addConnectionLog,
   getActiveProfile,
-  getDevMode,
   setLastError
 } from "~lib/storage"
-import type { ConnectionLogEntry, ProxyProfile } from "~lib/types"
+import type { ConnectionLogEntry } from "~lib/types"
 
 export {}
+
+/** devMode のメモリキャッシュ（毎リクエストのストレージ読み込みを回避） */
+let devModeCache = false
+
+/**
+ * devMode キャッシュを更新する（toggle-dev-mode ハンドラーから呼び出される）
+ */
+export function setDevModeCache(enabled: boolean): void {
+  devModeCache = enabled
+}
+
+/**
+ * devMode キャッシュの現在値を取得する
+ */
+export function getDevModeCache(): boolean {
+  return devModeCache
+}
 
 /**
  * 拡張機能インストール時の初期化
@@ -34,6 +50,10 @@ chrome.runtime.onStartup.addListener(async () => {
  * アクティブなプロキシ設定を復元する
  */
 async function restoreActiveProxy() {
+  // devMode キャッシュを初期化
+  const { getDevMode } = await import("~lib/storage")
+  devModeCache = await getDevMode()
+
   const profile = await getActiveProfile()
   if (profile) {
     try {
@@ -47,48 +67,6 @@ async function restoreActiveProxy() {
   } else {
     await deactivateProxy()
     await updateBadge(null)
-  }
-}
-
-/**
- * プロキシ認証ハンドラー (HTTP/HTTPS プロキシのみ)
- */
-function setupAuthHandler(profile: ProxyProfile | null) {
-  if (chrome.webRequest.onAuthRequired.hasListener(authHandler)) {
-    chrome.webRequest.onAuthRequired.removeListener(authHandler)
-  }
-
-  if (profile) {
-    const auth = getAuthFromProfile(profile)
-    if (auth) {
-      chrome.webRequest.onAuthRequired.addListener(
-        authHandler,
-        { urls: ["<all_urls>"] },
-        ["asyncBlocking"]
-      )
-    }
-  }
-}
-
-/**
- * 認証リクエストハンドラー
- */
-async function authHandler(
-  details: chrome.webRequest.WebAuthenticationChallengeDetails
-): Promise<chrome.webRequest.BlockingResponse> {
-  if (!details.isProxy) return {}
-
-  const profile = await getActiveProfile()
-  if (!profile) return {}
-
-  const auth = getAuthFromProfile(profile)
-  if (!auth) return {}
-
-  return {
-    authCredentials: {
-      username: auth.username,
-      password: auth.password
-    }
   }
 }
 
@@ -145,8 +123,7 @@ chrome.proxy.onProxyError.addListener(async (details) => {
  */
 chrome.webRequest.onCompleted.addListener(
   async (details) => {
-    const devMode = await getDevMode()
-    if (!devMode) return
+    if (!devModeCache) return
 
     const entry: ConnectionLogEntry = {
       id: `${details.requestId}-${Date.now()}`,
@@ -169,8 +146,7 @@ chrome.webRequest.onCompleted.addListener(
  */
 chrome.webRequest.onErrorOccurred.addListener(
   async (details) => {
-    const devMode = await getDevMode()
-    if (!devMode) return
+    if (!devModeCache) return
 
     const entry: ConnectionLogEntry = {
       id: `${details.requestId}-${Date.now()}`,

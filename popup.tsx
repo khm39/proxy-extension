@@ -1,52 +1,16 @@
 import { sendToBackground } from "@plasmohq/messaging"
 import { useEffect, useState } from "react"
 
-import type {
-  AppState,
-  FixedServerConfig,
-  ProxyProfile,
-  ProxyScheme,
-  ProxyType
-} from "~lib/types"
-import { DEFAULT_BYPASS_LIST, PROFILE_COLORS } from "~lib/types"
+import {
+  createEmptyProfile,
+  getProfileSummary,
+  updateProfileField,
+  updateSingleProxyField
+} from "~lib/profile-utils"
+import type { AppState, ProxyProfile, ProxyType } from "~lib/types"
+import { PROFILE_COLORS } from "~lib/types"
 
 import "./style.css"
-
-function generateId(): string {
-  return crypto.randomUUID()
-}
-
-function createEmptyProfile(): ProxyProfile {
-  return {
-    id: generateId(),
-    name: "",
-    color: PROFILE_COLORS[0],
-    type: "fixed_servers",
-    config: {
-      singleProxy: { scheme: "http", host: "", port: 8080 }
-    },
-    bypassList: [...DEFAULT_BYPASS_LIST],
-    createdAt: Date.now(),
-    updatedAt: Date.now()
-  }
-}
-
-function getProfileSummary(profile: ProxyProfile): string {
-  if (profile.type === "direct") return "直接接続"
-  if (profile.type === "system") return "システム設定"
-  if (profile.type === "pac_script") {
-    return profile.config.pacScript?.url
-      ? `PAC: ${profile.config.pacScript.url}`
-      : "PAC スクリプト"
-  }
-
-  const proxy =
-    profile.config.singleProxy ??
-    profile.config.proxyForHttps ??
-    profile.config.proxyForHttp
-  if (!proxy) return "未設定"
-  return `${proxy.scheme.toUpperCase()} ${proxy.host}:${proxy.port}`
-}
 
 function IndexPopup() {
   const [state, setState] = useState<AppState | null>(null)
@@ -67,17 +31,23 @@ function IndexPopup() {
 
   const handleActivate = async (profileId: string) => {
     setLoading(true)
-    await sendToBackground({
+    const result = await sendToBackground({
       name: "activate-profile",
       body: { profileId }
     })
+    if (!result.success) {
+      console.error("[ProxySwitcher] Failed to activate profile:", result.error)
+    }
     await fetchState()
     setLoading(false)
   }
 
   const handleDeactivate = async () => {
     setLoading(true)
-    await sendToBackground({ name: "deactivate-proxy" })
+    const result = await sendToBackground({ name: "deactivate-proxy" })
+    if (!result.success) {
+      console.error("[ProxySwitcher] Failed to deactivate proxy:", result.error)
+    }
     await fetchState()
     setLoading(false)
   }
@@ -105,10 +75,13 @@ function IndexPopup() {
   const handleSaveProfile = async () => {
     if (!editingProfile || !editingProfile.name.trim()) return
     setSaving(true)
-    await sendToBackground({
+    const result = await sendToBackground({
       name: "save-profile",
       body: { profile: { ...editingProfile, updatedAt: Date.now() } }
     })
+    if (!result.success) {
+      console.error("[ProxySwitcher] Failed to save profile:", result.error)
+    }
     await fetchState()
     setEditingProfile(null)
     setSaving(false)
@@ -119,26 +92,15 @@ function IndexPopup() {
     value: ProxyProfile[K]
   ) => {
     if (!editingProfile) return
-    setEditingProfile({ ...editingProfile, [key]: value })
+    setEditingProfile(updateProfileField(editingProfile, key, value))
   }
 
   const updateProxyField = (
-    field: keyof FixedServerConfig,
+    field: "scheme" | "host" | "port",
     value: string | number
   ) => {
     if (!editingProfile) return
-    const proxy = editingProfile.config.singleProxy ?? {
-      scheme: "http" as ProxyScheme,
-      host: "",
-      port: 8080
-    }
-    setEditingProfile({
-      ...editingProfile,
-      config: {
-        ...editingProfile.config,
-        singleProxy: { ...proxy, [field]: value }
-      }
-    })
+    setEditingProfile(updateSingleProxyField(editingProfile, field, value))
   }
 
   if (!state) {

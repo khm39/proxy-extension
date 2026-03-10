@@ -1,36 +1,20 @@
 import { sendToBackground } from "@plasmohq/messaging"
 import { useEffect, useState } from "react"
 
+import {
+  createEmptyProfile,
+  updateProfileField,
+  updateSingleProxyField
+} from "~lib/profile-utils"
 import type {
   AppState,
   ConnectionLogEntry,
-  FixedServerConfig,
   ProxyProfile,
-  ProxyScheme,
   ProxyType
 } from "~lib/types"
-import { DEFAULT_BYPASS_LIST, PROFILE_COLORS } from "~lib/types"
+import { PROFILE_COLORS } from "~lib/types"
 
 import "./style.css"
-
-function generateId(): string {
-  return crypto.randomUUID()
-}
-
-function createEmptyProfile(): ProxyProfile {
-  return {
-    id: generateId(),
-    name: "",
-    color: PROFILE_COLORS[0],
-    type: "fixed_servers",
-    config: {
-      singleProxy: { scheme: "http", host: "", port: 8080 }
-    },
-    bypassList: [...DEFAULT_BYPASS_LIST],
-    createdAt: Date.now(),
-    updatedAt: Date.now()
-  }
-}
 
 type OptionsView = "profiles" | "devtools"
 
@@ -83,10 +67,16 @@ function IndexOptions() {
   const handleSave = async () => {
     if (!editingProfile || !editingProfile.name.trim()) return
 
-    await sendToBackground({
+    const updatedProfile = { ...editingProfile, updatedAt: Date.now() }
+    const result = await sendToBackground({
       name: "save-profile",
-      body: { profile: { ...editingProfile, updatedAt: Date.now() } }
+      body: { profile: updatedProfile }
     })
+    if (!result.success) {
+      console.error("[ProxySwitcher] Failed to save profile:", result.error)
+      return
+    }
+    setEditingProfile(updatedProfile)
     await fetchState()
   }
 
@@ -94,10 +84,14 @@ function IndexOptions() {
     if (!selectedId) return
     if (!confirm("このプロファイルを削除しますか？")) return
 
-    await sendToBackground({
+    const result = await sendToBackground({
       name: "delete-profile",
       body: { profileId: selectedId }
     })
+    if (!result.success) {
+      console.error("[ProxySwitcher] Failed to delete profile:", result.error)
+      return
+    }
     setSelectedId(null)
     setEditingProfile(null)
     await fetchState()
@@ -124,10 +118,19 @@ function IndexOptions() {
       const text = await file.text()
       try {
         const profiles = JSON.parse(text)
-        await sendToBackground({
+        if (!Array.isArray(profiles)) {
+          alert("無効な JSON ファイルです: 配列を含むファイルを指定してください")
+          return
+        }
+        const result = await sendToBackground({
           name: "import-profiles",
           body: { profiles }
         })
+        if (result.skipped > 0) {
+          alert(
+            `インポート完了: ${result.imported} 件成功、${result.skipped} 件スキップ（無効なデータ）`
+          )
+        }
         await fetchState()
       } catch {
         alert("無効な JSON ファイルです")
@@ -141,26 +144,15 @@ function IndexOptions() {
     value: ProxyProfile[K]
   ) => {
     if (!editingProfile) return
-    setEditingProfile({ ...editingProfile, [key]: value })
+    setEditingProfile(updateProfileField(editingProfile, key, value))
   }
 
   const updateProxyField = (
-    field: keyof FixedServerConfig,
+    field: "scheme" | "host" | "port",
     value: string | number
   ) => {
     if (!editingProfile) return
-    const proxy = editingProfile.config.singleProxy ?? {
-      scheme: "http" as ProxyScheme,
-      host: "",
-      port: 8080
-    }
-    setEditingProfile({
-      ...editingProfile,
-      config: {
-        ...editingProfile.config,
-        singleProxy: { ...proxy, [field]: value }
-      }
-    })
+    setEditingProfile(updateSingleProxyField(editingProfile, field, value))
   }
 
   const addBypassItem = () => {
