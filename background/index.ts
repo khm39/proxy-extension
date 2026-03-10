@@ -4,7 +4,7 @@ import {
   getAuthFromProfile,
   updateBadge
 } from "~lib/proxy-manager"
-import { getActiveProfile } from "~lib/storage"
+import { getActiveProfile, setLastError } from "~lib/storage"
 import type { ProxyProfile } from "~lib/types"
 
 export {}
@@ -90,11 +90,16 @@ async function authHandler(
 /**
  * プロキシエラーのハンドリング
  */
-chrome.proxy.onProxyError.addListener((details) => {
+chrome.proxy.onProxyError.addListener(async (details) => {
   console.error(
     "[ProxySwitcher] Proxy error:",
     details.error,
     "fatal:",
     details.fatal
   )
+  await setLastError({
+    message: details.error,
+    fatal: details.fatal,
+    timestamp: Date.now()
+  })
 })

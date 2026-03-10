@@ -5,7 +5,7 @@ import {
   getAuthFromProfile,
   updateBadge
 } from "~lib/proxy-manager"
-import { getProfiles, setActiveProfileId } from "~lib/storage"
+import { getProfiles, setActiveProfileId, setLastError } from "~lib/storage"
 
 export type RequestBody = { profileId: string }
 export type ResponseBody = { success: boolean; error?: string }
@@ -24,6 +24,7 @@ const handler: PlasmoMessaging.MessageHandler<
       return
     }
 
+    await setLastError(null)
     await applyProfile(profile)
     await setActiveProfileId(profile.id)
     await updateBadge(profile)
