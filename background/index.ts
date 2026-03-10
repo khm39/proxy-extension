@@ -1,3 +1,4 @@
+import { getDevModeCache, setDevModeCache } from "~lib/dev-mode-cache"
 import {
   applyProfile,
   deactivateProxy,
@@ -12,23 +13,6 @@ import {
 import type { ConnectionLogEntry } from "~lib/types"
 
 export {}
-
-/** devMode のメモリキャッシュ（毎リクエストのストレージ読み込みを回避） */
-let devModeCache = false
-
-/**
- * devMode キャッシュを更新する（toggle-dev-mode ハンドラーから呼び出される）
- */
-export function setDevModeCache(enabled: boolean): void {
-  devModeCache = enabled
-}
-
-/**
- * devMode キャッシュの現在値を取得する
- */
-export function getDevModeCache(): boolean {
-  return devModeCache
-}
 
 /**
  * 拡張機能インストール時の初期化
@@ -52,7 +36,7 @@ chrome.runtime.onStartup.addListener(async () => {
 async function restoreActiveProxy() {
   // devMode キャッシュを初期化
   const { getDevMode } = await import("~lib/storage")
-  devModeCache = await getDevMode()
+  setDevModeCache(await getDevMode())
 
   const profile = await getActiveProfile()
   if (profile) {
@@ -123,7 +107,7 @@ chrome.proxy.onProxyError.addListener(async (details) => {
  */
 chrome.webRequest.onCompleted.addListener(
   async (details) => {
-    if (!devModeCache) return
+    if (!getDevModeCache()) return
 
     const entry: ConnectionLogEntry = {
       id: `${details.requestId}-${Date.now()}`,
@@ -146,7 +130,7 @@ chrome.webRequest.onCompleted.addListener(
  */
 chrome.webRequest.onErrorOccurred.addListener(
   async (details) => {
-    if (!devModeCache) return
+    if (!getDevModeCache()) return
 
     const entry: ConnectionLogEntry = {
       id: `${details.requestId}-${Date.now()}`,
