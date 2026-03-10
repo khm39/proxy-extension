@@ -1,11 +1,12 @@
 import { Storage } from "@plasmohq/storage"
 
-import type { AppState, ProxyProfile } from "./types"
+import type { AppState, ProxyError, ProxyProfile } from "./types"
 
 const storage = new Storage({ area: "local" })
 
 const PROFILES_KEY = "profiles"
 const ACTIVE_PROFILE_ID_KEY = "activeProfileId"
+const LAST_ERROR_KEY = "lastError"
 
 /**
  * 全プロファイルを取得
@@ -26,12 +27,33 @@ export async function getActiveProfileId(): Promise<string | null> {
 /**
  * アプリの全状態を取得
  */
+/**
+ * 最後のプロキシエラーを取得
+ */
+export async function getLastError(): Promise<ProxyError | null> {
+  const error = await storage.get<ProxyError | null>(LAST_ERROR_KEY)
+  return error ?? null
+}
+
+/**
+ * プロキシエラーを保存
+ */
+export async function setLastError(
+  error: ProxyError | null
+): Promise<void> {
+  await storage.set(LAST_ERROR_KEY, error)
+}
+
+/**
+ * アプリの全状態を取得
+ */
 export async function getState(): Promise<AppState> {
-  const [profiles, activeProfileId] = await Promise.all([
+  const [profiles, activeProfileId, lastError] = await Promise.all([
     getProfiles(),
-    getActiveProfileId()
+    getActiveProfileId(),
+    getLastError()
   ])
-  return { profiles, activeProfileId }
+  return { profiles, activeProfileId, lastError }
 }
 
 /**

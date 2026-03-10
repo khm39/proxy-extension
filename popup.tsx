@@ -64,6 +64,11 @@ function IndexPopup() {
     )
   }
 
+  const handleDismissError = async () => {
+    await sendToBackground({ name: "clear-error" })
+    await fetchState()
+  }
+
   return (
     <div className="popup-container">
       <header className="popup-header">
@@ -72,6 +77,31 @@ function IndexPopup() {
           ⚙
         </button>
       </header>
+
+      {state.lastError && (
+        <div
+          className={`error-banner ${state.lastError.fatal ? "fatal" : ""}`}>
+          <div className="error-content">
+            <span className="error-icon">
+              {state.lastError.fatal ? "!!" : "!"}
+            </span>
+            <div className="error-text">
+              <span className="error-message">
+                {state.lastError.message}
+              </span>
+              <span className="error-time">
+                {new Date(state.lastError.timestamp).toLocaleTimeString()}
+              </span>
+            </div>
+          </div>
+          <button
+            className="error-dismiss"
+            onClick={handleDismissError}
+            title="閉じる">
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="profile-list">
         <label

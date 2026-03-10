@@ -59,10 +59,18 @@ export interface ProxyProfile {
   updatedAt: number
 }
 
+/** プロキシエラー情報 */
+export interface ProxyError {
+  message: string
+  fatal: boolean
+  timestamp: number
+}
+
 /** アプリケーション全体の状態 */
 export interface AppState {
   activeProfileId: string | null
   profiles: ProxyProfile[]
+  lastError: ProxyError | null
 }
 
 /** デフォルトのバイパスリスト */
