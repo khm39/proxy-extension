@@ -4,7 +4,8 @@ import {
   getAuthFromProfile,
   updateBadge
 } from "~lib/proxy-manager"
-import { getActiveProfile, getActiveProfileId, getProfiles } from "~lib/storage"
+import { getActiveProfile } from "~lib/storage"
+import type { ProxyProfile } from "~lib/types"
 
 export {}
 
@@ -48,7 +49,6 @@ async function restoreActiveProxy() {
  * プロキシ認証ハンドラー (HTTP/HTTPS プロキシのみ)
  */
 function setupAuthHandler(profile: ProxyProfile | null) {
-  // 既存リスナーがあれば削除
   if (chrome.webRequest.onAuthRequired.hasListener(authHandler)) {
     chrome.webRequest.onAuthRequired.removeListener(authHandler)
   }
@@ -64,8 +64,6 @@ function setupAuthHandler(profile: ProxyProfile | null) {
     }
   }
 }
-
-import type { ProxyProfile } from "~lib/types"
 
 /**
  * 認証リクエストハンドラー
@@ -93,5 +91,10 @@ async function authHandler(
  * プロキシエラーのハンドリング
  */
 chrome.proxy.onProxyError.addListener((details) => {
-  console.error("[ProxySwitcher] Proxy error:", details.error, "fatal:", details.fatal)
+  console.error(
+    "[ProxySwitcher] Proxy error:",
+    details.error,
+    "fatal:",
+    details.fatal
+  )
 })

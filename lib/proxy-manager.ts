@@ -3,7 +3,9 @@ import type { FixedServerConfig, ProxyProfile } from "./types"
 /**
  * ProxyProfile を chrome.proxy.settings.set() 用の設定オブジェクトに変換する
  */
-function buildChromeProxyConfig(profile: ProxyProfile): chrome.proxy.ProxyConfig {
+function buildChromeProxyConfig(
+  profile: ProxyProfile
+): chrome.proxy.ProxyConfig {
   switch (profile.type) {
     case "direct":
       return { mode: "direct" }
@@ -54,7 +56,9 @@ function buildChromeProxyConfig(profile: ProxyProfile): chrome.proxy.ProxyConfig
   }
 }
 
-function toProxyServer(config: FixedServerConfig): chrome.proxy.ProxyServer {
+function toProxyServer(
+  config: FixedServerConfig
+): chrome.proxy.ProxyServer {
   return {
     scheme: config.scheme,
     host: config.host,
@@ -68,13 +72,16 @@ function toProxyServer(config: FixedServerConfig): chrome.proxy.ProxyServer {
 export async function applyProfile(profile: ProxyProfile): Promise<void> {
   const config = buildChromeProxyConfig(profile)
   return new Promise<void>((resolve, reject) => {
-    chrome.proxy.settings.set({ value: config, scope: "regular" }, () => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message))
-      } else {
-        resolve()
+    chrome.proxy.settings.set(
+      { value: config, scope: "regular" },
+      () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message))
+        } else {
+          resolve()
+        }
       }
-    })
+    )
   })
 }
 
@@ -110,7 +117,10 @@ export function getAuthFromProfile(
   ]
   for (const config of configs) {
     if (config?.auth?.username && config?.auth?.password) {
-      return { username: config.auth.username, password: config.auth.password }
+      return {
+        username: config.auth.username,
+        password: config.auth.password
+      }
     }
   }
   return null
@@ -119,7 +129,9 @@ export function getAuthFromProfile(
 /**
  * アイコンバッジを更新する
  */
-export async function updateBadge(profile: ProxyProfile | null): Promise<void> {
+export async function updateBadge(
+  profile: ProxyProfile | null
+): Promise<void> {
   if (profile) {
     await chrome.action.setBadgeText({ text: "ON" })
     await chrome.action.setBadgeBackgroundColor({ color: profile.color })

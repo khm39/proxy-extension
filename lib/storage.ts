@@ -1,6 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import { DEFAULT_APP_STATE, type AppState, type ProxyProfile } from "./types"
+import type { AppState, ProxyProfile } from "./types"
 
 const storage = new Storage({ area: "local" })
 
@@ -56,7 +56,6 @@ export async function deleteProfile(profileId: string): Promise<void> {
   const filtered = profiles.filter((p) => p.id !== profileId)
   await storage.set(PROFILES_KEY, filtered)
 
-  // アクティブなプロファイルが削除された場合はリセット
   const activeId = await getActiveProfileId()
   if (activeId === profileId) {
     await setActiveProfileId(null)

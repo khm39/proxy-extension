@@ -44,7 +44,7 @@ export const PROFILE_COLORS = [
   "#9C27B0", // purple
   "#607D8B", // blue-grey
   "#FF9800", // orange
-  "#00BCD4"  // cyan
+  "#00BCD4" // cyan
 ] as const
 
 /** プロキシプロファイル */
@@ -72,9 +72,3 @@ export const DEFAULT_BYPASS_LIST = [
   "::1",
   "<local>"
 ]
-
-/** デフォルトの初期状態 */
-export const DEFAULT_APP_STATE: AppState = {
-  activeProfileId: null,
-  profiles: []
-}
