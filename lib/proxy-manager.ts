@@ -74,10 +74,11 @@ function toProxyServer(
 }
 
 /**
- * プロファイルのプロキシ設定を Chrome に適用する
+ * chrome.proxy.settings.set をPromise化して実行する
  */
-export async function applyProfile(profile: ProxyProfile): Promise<void> {
-  const config = buildChromeProxyConfig(profile)
+function setChromeProxySettings(
+  config: chrome.proxy.ProxyConfig
+): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     chrome.proxy.settings.set(
       { value: config, scope: "regular" },
@@ -93,21 +94,17 @@ export async function applyProfile(profile: ProxyProfile): Promise<void> {
 }
 
 /**
+ * プロファイルのプロキシ設定を Chrome に適用する
+ */
+export function applyProfile(profile: ProxyProfile): Promise<void> {
+  return setChromeProxySettings(buildChromeProxyConfig(profile))
+}
+
+/**
  * プロキシを解除して直接接続に戻す
  */
-export async function deactivateProxy(): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    chrome.proxy.settings.set(
-      { value: { mode: "direct" }, scope: "regular" },
-      () => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message))
-        } else {
-          resolve()
-        }
-      }
-    )
-  })
+export function deactivateProxy(): Promise<void> {
+  return setChromeProxySettings({ mode: "direct" })
 }
 
 /**

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import {
   createEmptyProfile,
   getProfileSummary,
+  updatePacScriptField,
   updateProfileField,
   updateSingleProxyField
 } from "~lib/profile-utils"
@@ -72,6 +73,11 @@ function IndexPopup() {
     setEditingProfile(null)
   }
 
+  const handleDismissError = async () => {
+    await sendToBackground({ name: "clear-error" })
+    await fetchState()
+  }
+
   const handleSaveProfile = async () => {
     if (!editingProfile || !editingProfile.name.trim()) return
     setSaving(true)
@@ -109,11 +115,6 @@ function IndexPopup() {
         <p className="loading">読み込み中...</p>
       </div>
     )
-  }
-
-  const handleDismissError = async () => {
-    await sendToBackground({ name: "clear-error" })
-    await fetchState()
   }
 
   // プロファイル登録フォーム表示時
@@ -221,16 +222,9 @@ function IndexPopup() {
                 type="text"
                 value={editingProfile.config.pacScript?.url ?? ""}
                 onChange={(e) =>
-                  setEditingProfile({
-                    ...editingProfile,
-                    config: {
-                      ...editingProfile.config,
-                      pacScript: {
-                        ...editingProfile.config.pacScript,
-                        url: e.target.value || undefined
-                      }
-                    }
-                  })
+                  setEditingProfile(
+                    updatePacScriptField(editingProfile, "url", e.target.value)
+                  )
                 }
                 placeholder="https://example.com/proxy.pac"
               />

@@ -3,7 +3,10 @@ import { useEffect, useState } from "react"
 
 import {
   createEmptyProfile,
+  toggleProxyAuth,
+  updatePacScriptField,
   updateProfileField,
+  updateProxyAuthField,
   updateSingleProxyField
 } from "~lib/profile-utils"
 import type {
@@ -464,22 +467,11 @@ function IndexOptions() {
                     type="checkbox"
                     id="use-auth"
                     checked={!!editingProfile.config.singleProxy?.auth}
-                    onChange={(e) => {
-                      const proxy = editingProfile.config.singleProxy
-                      if (!proxy) return
-                      setEditingProfile({
-                        ...editingProfile,
-                        config: {
-                          ...editingProfile.config,
-                          singleProxy: {
-                            ...proxy,
-                            auth: e.target.checked
-                              ? { username: "", password: "" }
-                              : undefined
-                          }
-                        }
-                      })
-                    }}
+                    onChange={(e) =>
+                      setEditingProfile(
+                        toggleProxyAuth(editingProfile, e.target.checked)
+                      )
+                    }
                   />
                   <label htmlFor="use-auth">認証を使用する</label>
                 </div>
@@ -493,22 +485,11 @@ function IndexOptions() {
                         value={
                           editingProfile.config.singleProxy.auth.username
                         }
-                        onChange={(e) => {
-                          const proxy = editingProfile.config.singleProxy!
-                          setEditingProfile({
-                            ...editingProfile,
-                            config: {
-                              ...editingProfile.config,
-                              singleProxy: {
-                                ...proxy,
-                                auth: {
-                                  ...proxy.auth!,
-                                  username: e.target.value
-                                }
-                              }
-                            }
-                          })
-                        }}
+                        onChange={(e) =>
+                          setEditingProfile(
+                            updateProxyAuthField(editingProfile, "username", e.target.value)
+                          )
+                        }
                       />
                     </div>
                     <div className="form-group">
@@ -518,22 +499,11 @@ function IndexOptions() {
                         value={
                           editingProfile.config.singleProxy.auth.password
                         }
-                        onChange={(e) => {
-                          const proxy = editingProfile.config.singleProxy!
-                          setEditingProfile({
-                            ...editingProfile,
-                            config: {
-                              ...editingProfile.config,
-                              singleProxy: {
-                                ...proxy,
-                                auth: {
-                                  ...proxy.auth!,
-                                  password: e.target.value
-                                }
-                              }
-                            }
-                          })
-                        }}
+                        onChange={(e) =>
+                          setEditingProfile(
+                            updateProxyAuthField(editingProfile, "password", e.target.value)
+                          )
+                        }
                       />
                     </div>
                   </div>
@@ -553,16 +523,9 @@ function IndexOptions() {
                     type="text"
                     value={editingProfile.config.pacScript?.url ?? ""}
                     onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        config: {
-                          ...editingProfile.config,
-                          pacScript: {
-                            ...editingProfile.config.pacScript,
-                            url: e.target.value || undefined
-                          }
-                        }
-                      })
+                      setEditingProfile(
+                        updatePacScriptField(editingProfile, "url", e.target.value)
+                      )
                     }
                     placeholder="https://example.com/proxy.pac"
                   />
@@ -572,16 +535,9 @@ function IndexOptions() {
                   <textarea
                     value={editingProfile.config.pacScript?.data ?? ""}
                     onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        config: {
-                          ...editingProfile.config,
-                          pacScript: {
-                            ...editingProfile.config.pacScript,
-                            data: e.target.value || undefined
-                          }
-                        }
-                      })
+                      setEditingProfile(
+                        updatePacScriptField(editingProfile, "data", e.target.value)
+                      )
                     }
                     placeholder={`function FindProxyForURL(url, host) {\n  return "DIRECT";\n}`}
                   />
