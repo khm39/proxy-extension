@@ -1,5 +1,4 @@
 import type { FixedServerConfig, ProxyProfile } from "./types"
-import { getActiveProfile } from "./storage"
 
 /** 現在の認証ハンドラー参照（リスナー解除用） */
 let currentAuthHandler:
@@ -151,14 +150,20 @@ export async function updateBadge(
 /**
  * プロキシ認証ハンドラーを設定する（HTTP/HTTPS プロキシのみ）
  * profile が null の場合、既存のリスナーを解除する
+ *
+ * 認証リクエスト時に最新のプロファイルを取得するため、
+ * getActiveProfile 関数を引数で受け取る（循環依存回避）
  */
-export function setupAuthHandler(profile: ProxyProfile | null): void {
+export function setupAuthHandler(
+  profile: ProxyProfile | null,
+  getActiveProfile?: () => Promise<ProxyProfile | null>
+): void {
   if (currentAuthHandler) {
     chrome.webRequest.onAuthRequired.removeListener(currentAuthHandler)
     currentAuthHandler = null
   }
 
-  if (profile) {
+  if (profile && getActiveProfile) {
     const auth = getAuthFromProfile(profile)
     if (auth) {
       currentAuthHandler = async (

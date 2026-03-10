@@ -5,7 +5,12 @@ import {
   setupAuthHandler,
   updateBadge
 } from "~lib/proxy-manager"
-import { getProfiles, setActiveProfileId, setLastError } from "~lib/storage"
+import {
+  getActiveProfile,
+  getProfiles,
+  setActiveProfileId,
+  setLastError
+} from "~lib/storage"
 
 export type RequestBody = { profileId: string }
 export type ResponseBody = { success: boolean; error?: string }
@@ -28,7 +33,7 @@ const handler: PlasmoMessaging.MessageHandler<
     await applyProfile(profile)
     await setActiveProfileId(profile.id)
     await updateBadge(profile)
-    setupAuthHandler(profile)
+    setupAuthHandler(profile, getActiveProfile)
 
     res.send({ success: true })
   } catch (e) {

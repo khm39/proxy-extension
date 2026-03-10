@@ -43,7 +43,7 @@ async function restoreActiveProxy() {
     try {
       await applyProfile(profile)
       await updateBadge(profile)
-      setupAuthHandler(profile)
+      setupAuthHandler(profile, getActiveProfile)
     } catch (e) {
       console.error("[ProxySwitcher] Failed to restore proxy:", e)
       await updateBadge(null)
