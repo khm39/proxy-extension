@@ -1,9 +1,35 @@
 import { sendToBackground } from "@plasmohq/messaging"
 import { useEffect, useState } from "react"
 
-import type { AppState, ProxyProfile } from "~lib/types"
+import type {
+  AppState,
+  FixedServerConfig,
+  ProxyProfile,
+  ProxyScheme,
+  ProxyType
+} from "~lib/types"
+import { DEFAULT_BYPASS_LIST, PROFILE_COLORS } from "~lib/types"
 
 import "./style.css"
+
+function generateId(): string {
+  return crypto.randomUUID()
+}
+
+function createEmptyProfile(): ProxyProfile {
+  return {
+    id: generateId(),
+    name: "",
+    color: PROFILE_COLORS[0],
+    type: "fixed_servers",
+    config: {
+      singleProxy: { scheme: "http", host: "", port: 8080 }
+    },
+    bypassList: [...DEFAULT_BYPASS_LIST],
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  }
+}
 
 function getProfileSummary(profile: ProxyProfile): string {
   if (profile.type === "direct") return "直接接続"
@@ -25,6 +51,10 @@ function getProfileSummary(profile: ProxyProfile): string {
 function IndexPopup() {
   const [state, setState] = useState<AppState | null>(null)
   const [loading, setLoading] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<ProxyProfile | null>(
+    null
+  )
+  const [saving, setSaving] = useState(false)
 
   const fetchState = async () => {
     const result = await sendToBackground({ name: "get-state" })
@@ -62,6 +92,52 @@ function IndexPopup() {
       body: { enabled: !state?.devMode }
     })
     await fetchState()
+
+  const handleNewProfile = () => {
+    setEditingProfile(createEmptyProfile())
+  }
+
+  const handleCancelEdit = () => {
+    setEditingProfile(null)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!editingProfile || !editingProfile.name.trim()) return
+    setSaving(true)
+    await sendToBackground({
+      name: "save-profile",
+      body: { profile: { ...editingProfile, updatedAt: Date.now() } }
+    })
+    await fetchState()
+    setEditingProfile(null)
+    setSaving(false)
+  }
+
+  const updateField = <K extends keyof ProxyProfile>(
+    key: K,
+    value: ProxyProfile[K]
+  ) => {
+    if (!editingProfile) return
+    setEditingProfile({ ...editingProfile, [key]: value })
+  }
+
+  const updateProxyField = (
+    field: keyof FixedServerConfig,
+    value: string | number
+  ) => {
+    if (!editingProfile) return
+    const proxy = editingProfile.config.singleProxy ?? {
+      scheme: "http" as ProxyScheme,
+      host: "",
+      port: 8080
+    }
+    setEditingProfile({
+      ...editingProfile,
+      config: {
+        ...editingProfile.config,
+        singleProxy: { ...proxy, [field]: value }
+      }
+    })
   }
 
   if (!state) {
@@ -75,6 +151,146 @@ function IndexPopup() {
   const handleDismissError = async () => {
     await sendToBackground({ name: "clear-error" })
     await fetchState()
+  }
+
+  // プロファイル登録フォーム表示時
+  if (editingProfile) {
+    return (
+      <div className="popup-container">
+        <header className="popup-header">
+          <button className="icon-btn" onClick={handleCancelEdit} title="戻る">
+            ←
+          </button>
+          <h1>新規プロファイル</h1>
+          <span />
+        </header>
+
+        <div className="popup-form">
+          <div className="popup-form-group">
+            <label>プロファイル名</label>
+            <input
+              type="text"
+              value={editingProfile.name}
+              onChange={(e) => updateField("name", e.target.value)}
+              placeholder="例: Work Proxy"
+              autoFocus
+            />
+          </div>
+
+          <div className="popup-form-group">
+            <label>色</label>
+            <div className="popup-color-picker">
+              {PROFILE_COLORS.map((color) => (
+                <button
+                  key={color}
+                  className={`color-swatch ${editingProfile.color === color ? "selected" : ""}`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => updateField("color", color)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="popup-form-group">
+            <label>プロキシタイプ</label>
+            <select
+              value={editingProfile.type}
+              onChange={(e) =>
+                updateField("type", e.target.value as ProxyType)
+              }>
+              <option value="fixed_servers">固定サーバー</option>
+              <option value="pac_script">PAC スクリプト</option>
+              <option value="direct">直接接続</option>
+              <option value="system">システム設定</option>
+            </select>
+          </div>
+
+          {editingProfile.type === "fixed_servers" && (
+            <>
+              <div className="popup-form-group">
+                <label>スキーム</label>
+                <select
+                  value={
+                    editingProfile.config.singleProxy?.scheme ?? "http"
+                  }
+                  onChange={(e) =>
+                    updateProxyField("scheme", e.target.value)
+                  }>
+                  <option value="http">HTTP</option>
+                  <option value="https">HTTPS</option>
+                  <option value="socks4">SOCKS4</option>
+                  <option value="socks5">SOCKS5</option>
+                </select>
+              </div>
+              <div className="popup-form-row">
+                <div className="popup-form-group popup-form-flex">
+                  <label>ホスト</label>
+                  <input
+                    type="text"
+                    value={editingProfile.config.singleProxy?.host ?? ""}
+                    onChange={(e) =>
+                      updateProxyField("host", e.target.value)
+                    }
+                    placeholder="proxy.example.com"
+                  />
+                </div>
+                <div className="popup-form-group popup-form-port">
+                  <label>ポート</label>
+                  <input
+                    type="number"
+                    value={editingProfile.config.singleProxy?.port ?? 8080}
+                    onChange={(e) =>
+                      updateProxyField(
+                        "port",
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {editingProfile.type === "pac_script" && (
+            <div className="popup-form-group">
+              <label>PAC URL</label>
+              <input
+                type="text"
+                value={editingProfile.config.pacScript?.url ?? ""}
+                onChange={(e) =>
+                  setEditingProfile({
+                    ...editingProfile,
+                    config: {
+                      ...editingProfile.config,
+                      pacScript: {
+                        ...editingProfile.config.pacScript,
+                        url: e.target.value || undefined
+                      }
+                    }
+                  })
+                }
+                placeholder="https://example.com/proxy.pac"
+              />
+            </div>
+          )}
+        </div>
+
+        <footer className="popup-form-actions">
+          <button
+            className="btn-popup-cancel"
+            onClick={handleCancelEdit}
+            disabled={saving}>
+            キャンセル
+          </button>
+          <button
+            className="btn-popup-save"
+            onClick={handleSaveProfile}
+            disabled={saving || !editingProfile.name.trim()}>
+            {saving ? "保存中..." : "保存"}
+          </button>
+        </footer>
+      </div>
+    )
   }
 
   return (
@@ -166,7 +382,7 @@ function IndexPopup() {
       </div>
 
       <footer className="popup-footer">
-        <button className="btn-add" onClick={openOptions}>
+        <button className="btn-add" onClick={handleNewProfile}>
           + 新規プロファイル
         </button>
       </footer>
