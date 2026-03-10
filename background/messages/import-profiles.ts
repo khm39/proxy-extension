@@ -1,18 +1,22 @@
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 
 import { importProfiles } from "~lib/storage"
-import type { ProxyProfile } from "~lib/types"
 
-export type RequestBody = { profiles: ProxyProfile[] }
-export type ResponseBody = { success: boolean; error?: string }
+export type RequestBody = { profiles: unknown[] }
+export type ResponseBody = {
+  success: boolean
+  imported?: number
+  skipped?: number
+  error?: string
+}
 
 const handler: PlasmoMessaging.MessageHandler<
   RequestBody,
   ResponseBody
 > = async (req, res) => {
   try {
-    await importProfiles(req.body.profiles)
-    res.send({ success: true })
+    const { imported, skipped } = await importProfiles(req.body.profiles)
+    res.send({ success: true, imported, skipped })
   } catch (e) {
     res.send({ success: false, error: String(e) })
   }

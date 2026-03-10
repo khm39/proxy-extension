@@ -1,4 +1,12 @@
 import type { FixedServerConfig, ProxyProfile } from "./types"
+import { getActiveProfile } from "./storage"
+
+/** 現在の認証ハンドラー参照（リスナー解除用） */
+let currentAuthHandler:
+  | ((
+      details: chrome.webRequest.WebAuthenticationChallengeDetails
+    ) => Promise<chrome.webRequest.BlockingResponse>)
+  | null = null
 
 /**
  * ProxyProfile を chrome.proxy.settings.set() 用の設定オブジェクトに変換する
@@ -137,5 +145,46 @@ export async function updateBadge(
     await chrome.action.setBadgeBackgroundColor({ color: profile.color })
   } else {
     await chrome.action.setBadgeText({ text: "" })
+  }
+}
+
+/**
+ * プロキシ認証ハンドラーを設定する（HTTP/HTTPS プロキシのみ）
+ * profile が null の場合、既存のリスナーを解除する
+ */
+export function setupAuthHandler(profile: ProxyProfile | null): void {
+  if (currentAuthHandler) {
+    chrome.webRequest.onAuthRequired.removeListener(currentAuthHandler)
+    currentAuthHandler = null
+  }
+
+  if (profile) {
+    const auth = getAuthFromProfile(profile)
+    if (auth) {
+      currentAuthHandler = async (
+        details: chrome.webRequest.WebAuthenticationChallengeDetails
+      ): Promise<chrome.webRequest.BlockingResponse> => {
+        if (!details.isProxy) return {}
+
+        const activeProfile = await getActiveProfile()
+        if (!activeProfile) return {}
+
+        const activeAuth = getAuthFromProfile(activeProfile)
+        if (!activeAuth) return {}
+
+        return {
+          authCredentials: {
+            username: activeAuth.username,
+            password: activeAuth.password
+          }
+        }
+      }
+
+      chrome.webRequest.onAuthRequired.addListener(
+        currentAuthHandler,
+        { urls: ["<all_urls>"] },
+        ["asyncBlocking"]
+      )
+    }
   }
 }

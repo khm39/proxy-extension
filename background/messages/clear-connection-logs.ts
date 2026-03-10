@@ -9,8 +9,13 @@ const handler: PlasmoMessaging.MessageHandler<
   RequestBody,
   ResponseBody
 > = async (_req, res) => {
-  await clearConnectionLogs()
-  res.send({ success: true })
+  try {
+    await clearConnectionLogs()
+    res.send({ success: true })
+  } catch (e) {
+    console.error("[ProxySwitcher] Failed to clear connection logs:", e)
+    res.send({ success: false })
+  }
 }
 
 export default handler

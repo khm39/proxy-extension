@@ -10,8 +10,13 @@ const handler: PlasmoMessaging.MessageHandler<
   RequestBody,
   ResponseBody
 > = async (_req, res) => {
-  const logs = await getConnectionLogs()
-  res.send({ logs })
+  try {
+    const logs = await getConnectionLogs()
+    res.send({ logs })
+  } catch (e) {
+    console.error("[ProxySwitcher] Failed to get connection logs:", e)
+    res.send({ logs: [] })
+  }
 }
 
 export default handler

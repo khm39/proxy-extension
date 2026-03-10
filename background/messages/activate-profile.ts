@@ -2,7 +2,7 @@ import type { PlasmoMessaging } from "@plasmohq/messaging"
 
 import {
   applyProfile,
-  getAuthFromProfile,
+  setupAuthHandler,
   updateBadge
 } from "~lib/proxy-manager"
 import { getProfiles, setActiveProfileId, setLastError } from "~lib/storage"
@@ -28,6 +28,7 @@ const handler: PlasmoMessaging.MessageHandler<
     await applyProfile(profile)
     await setActiveProfileId(profile.id)
     await updateBadge(profile)
+    setupAuthHandler(profile)
 
     res.send({ success: true })
   } catch (e) {

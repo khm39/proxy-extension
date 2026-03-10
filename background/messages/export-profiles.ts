@@ -9,8 +9,13 @@ const handler: PlasmoMessaging.MessageHandler<
   RequestBody,
   ResponseBody
 > = async (_req, res) => {
-  const data = await exportProfiles()
-  res.send({ data })
+  try {
+    const data = await exportProfiles()
+    res.send({ data })
+  } catch (e) {
+    console.error("[ProxySwitcher] Failed to export profiles:", e)
+    res.send({ data: "[]" })
+  }
 }
 
 export default handler
