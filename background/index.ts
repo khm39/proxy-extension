@@ -4,8 +4,13 @@ import {
   getAuthFromProfile,
   updateBadge
 } from "~lib/proxy-manager"
-import { getActiveProfile, setLastError } from "~lib/storage"
-import type { ProxyProfile } from "~lib/types"
+import {
+  addConnectionLog,
+  getActiveProfile,
+  getDevMode,
+  setLastError
+} from "~lib/storage"
+import type { ConnectionLogEntry, ProxyProfile } from "~lib/types"
 
 export {}
 
@@ -103,3 +108,49 @@ chrome.proxy.onProxyError.addListener(async (details) => {
     timestamp: Date.now()
   })
 })
+
+/**
+ * 開発者モード: リクエスト完了時の接続ログ記録
+ */
+chrome.webRequest.onCompleted.addListener(
+  async (details) => {
+    const devMode = await getDevMode()
+    if (!devMode) return
+
+    const entry: ConnectionLogEntry = {
+      id: `${details.requestId}-${Date.now()}`,
+      timestamp: Date.now(),
+      method: details.method,
+      url: details.url,
+      type: details.type,
+      statusCode: details.statusCode,
+      statusLine: details.statusLine,
+      ip: details.ip,
+      fromCache: details.fromCache
+    }
+    await addConnectionLog(entry)
+  },
+  { urls: ["<all_urls>"] }
+)
+
+/**
+ * 開発者モード: リクエストエラー時の接続ログ記録
+ */
+chrome.webRequest.onErrorOccurred.addListener(
+  async (details) => {
+    const devMode = await getDevMode()
+    if (!devMode) return
+
+    const entry: ConnectionLogEntry = {
+      id: `${details.requestId}-${Date.now()}`,
+      timestamp: Date.now(),
+      method: details.method,
+      url: details.url,
+      type: details.type,
+      fromCache: false,
+      error: details.error
+    }
+    await addConnectionLog(entry)
+  },
+  { urls: ["<all_urls>"] }
+)

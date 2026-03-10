@@ -86,6 +86,13 @@ function IndexPopup() {
     chrome.runtime.openOptionsPage()
   }
 
+  const handleToggleDevMode = async () => {
+    await sendToBackground({
+      name: "toggle-dev-mode",
+      body: { enabled: !state?.devMode }
+    })
+    await fetchState()
+
   const handleNewProfile = () => {
     setEditingProfile(createEmptyProfile())
   }
@@ -290,10 +297,24 @@ function IndexPopup() {
     <div className="popup-container">
       <header className="popup-header">
         <h1>Proxy Switcher</h1>
-        <button className="icon-btn" onClick={openOptions} title="設定">
-          ⚙
-        </button>
+        <div className="popup-header-actions">
+          <button
+            className={`icon-btn ${state.devMode ? "dev-mode-active" : ""}`}
+            onClick={handleToggleDevMode}
+            title={state.devMode ? "開発者モード: ON" : "開発者モード: OFF"}>
+            {"</>"}
+          </button>
+          <button className="icon-btn" onClick={openOptions} title="設定">
+            ⚙
+          </button>
+        </div>
       </header>
+
+      {state.devMode && (
+        <div className="dev-mode-banner">
+          開発者モード有効 — 接続ログ記録中
+        </div>
+      )}
 
       {state.lastError && (
         <div
