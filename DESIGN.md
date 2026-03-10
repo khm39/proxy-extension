@@ -231,28 +231,56 @@ chrome.proxy.settings.set({
 });
 ```
 
-### 4.3 プロキシ認証
+### 4.3 プロキシ認証 (Manifest V3)
+
+Manifest V3 では `webRequestAuthProvider` 権限と `asyncBlocking` を使用する（Chrome 108+）。
 
 ```javascript
 chrome.webRequest.onAuthRequired.addListener(
   (details) => {
     if (details.isProxy) {
-      return {
-        authCredentials: {
-          username: savedUsername,
-          password: savedPassword
+      // asyncBlocking では Promise を返す
+      return chrome.storage.local.get('activeProfile').then((result) => {
+        const profile = result.activeProfile;
+        if (profile?.config?.singleProxy?.auth) {
+          return {
+            authCredentials: {
+              username: profile.config.singleProxy.auth.username,
+              password: profile.config.singleProxy.auth.password
+            }
+          };
         }
-      };
+      });
     }
   },
   { urls: ['<all_urls>'] },
-  ['blocking']
+  ['asyncBlocking']
 );
 ```
 
-> **注意**: Manifest V3 では `blocking` の代わりに `asyncBlocking` を使用する。
-> Service Worker から `chrome.webRequest.onAuthRequired.addListener` を使い、
-> コールバックで Promise を返す形式にする。
+> **制限事項**:
+> - `onAuthRequired` は HTTP/HTTPS プロキシ認証のみ対応。
+> - **SOCKS5 のユーザー名/パスワード認証は Chrome API では非対応**。SOCKS プロキシの認証には IP ホワイトリストや SSH トンネルを使用する必要がある。
+
+### 4.4 エラーハンドリング
+
+```javascript
+chrome.proxy.onProxyError.addListener((details) => {
+  console.error('Proxy error:', details.error, 'fatal:', details.fatal);
+  // fatal=true の場合、ネットワークトランザクションは中断される
+  // fatal=false の場合、直接接続にフォールバックされる
+});
+```
+
+### 4.5 設定の競合チェック
+
+```javascript
+chrome.proxy.settings.get({ incognito: false }, (config) => {
+  // config.levelOfControl で制御状態を確認
+  // "controlled_by_this_extension" | "controlled_by_other_extensions" |
+  // "controllable_by_this_extension" | "not_controllable"
+});
+```
 
 ## 5. ディレクトリ構成
 
