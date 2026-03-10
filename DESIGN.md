@@ -282,115 +282,94 @@ chrome.proxy.settings.get({ incognito: false }, (config) => {
 });
 ```
 
-## 5. ディレクトリ構成
+## 5. 技術スタック
+
+- **Plasmo Framework** (v0.90+) — Chrome Extension ビルドフレームワーク
+- **TypeScript** — 型安全な開発
+- **React 18** — Popup / Options UI
+- **@plasmohq/messaging** — Background ⇔ UI 間メッセージング
+- **@plasmohq/storage** — `chrome.storage.local` ラッパー
+
+## 6. ディレクトリ構成 (Plasmo)
 
 ```
 proxy-extension/
-├── manifest.json              # 拡張機能マニフェスト (Manifest V3)
-├── background/
-│   └── service-worker.js      # Service Worker (コアロジック)
-├── popup/
-│   ├── popup.html             # ポップアップ HTML
-│   ├── popup.js               # ポップアップ JS
-│   └── popup.css              # ポップアップ CSS
-├── options/
-│   ├── options.html           # オプションページ HTML
-│   ├── options.js             # オプションページ JS
-│   └── options.css            # オプションページ CSS
-├── lib/
-│   ├── proxy-manager.js       # プロキシ設定ロジック
-│   ├── storage-manager.js     # ストレージ操作
-│   └── message-types.js       # メッセージ型定数
-├── icons/
-│   ├── icon-16.png
-│   ├── icon-32.png
-│   ├── icon-48.png
-│   └── icon-128.png
-├── DESIGN.md                  # この設計ドキュメント
-└── README.md                  # 使い方・開発ガイド
+├── package.json              # Plasmo 設定 + manifest 権限オーバーライド
+├── tsconfig.json             # TypeScript 設定
+├── assets/
+│   └── icon.png              # 拡張機能アイコン (Plasmo が自動リサイズ)
+├── src/
+│   ├── popup.tsx             # ポップアップ UI (React)
+│   ├── options.tsx           # オプションページ (React)
+│   ├── style.css             # 共通 CSS
+│   ├── background/
+│   │   ├── index.ts          # Service Worker エントリ
+│   │   └── messages/         # @plasmohq/messaging ハンドラー
+│   │       ├── get-state.ts
+│   │       ├── activate-profile.ts
+│   │       ├── deactivate-proxy.ts
+│   │       ├── save-profile.ts
+│   │       ├── delete-profile.ts
+│   │       ├── export-profiles.ts
+│   │       └── import-profiles.ts
+│   └── lib/
+│       ├── types.ts          # 型定義・定数
+│       ├── proxy-manager.ts  # プロキシ設定ロジック
+│       └── storage.ts        # ストレージ操作
+├── build/                    # ビルド出力 (gitignore)
+├── .plasmo/                  # Plasmo 内部 (gitignore)
+└── DESIGN.md                 # この設計ドキュメント
 ```
 
-## 6. manifest.json
-
-```json
-{
-  "manifest_version": 3,
-  "name": "Proxy Switcher",
-  "version": "1.0.0",
-  "description": "プロキシサーバーの設定と切り替えを簡単に行える拡張機能",
-  "permissions": [
-    "proxy",
-    "storage",
-    "webRequest",
-    "webRequestAuthProvider"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
-  "background": {
-    "service_worker": "background/service-worker.js",
-    "type": "module"
-  },
-  "action": {
-    "default_popup": "popup/popup.html",
-    "default_icon": {
-      "16": "icons/icon-16.png",
-      "32": "icons/icon-32.png",
-      "48": "icons/icon-48.png",
-      "128": "icons/icon-128.png"
-    }
-  },
-  "options_ui": {
-    "page": "options/options.html",
-    "open_in_tab": true
-  },
-  "icons": {
-    "16": "icons/icon-16.png",
-    "32": "icons/icon-32.png",
-    "48": "icons/icon-48.png",
-    "128": "icons/icon-128.png"
-  }
-}
-```
+manifest.json は Plasmo が `package.json` の `manifest` フィールドとファイル構成から自動生成する。
 
 ## 7. 主要モジュール設計
 
-### 7.1 ProxyManager (lib/proxy-manager.js)
-
-プロキシ設定の中核ロジックを担当するモジュール。
+### 7.1 proxy-manager.ts (src/lib/)
 
 ```
-ProxyManager
-├── applyProfile(profile)      # プロファイルを適用してプロキシを設定
-├── deactivate()               # プロキシを解除（直接接続に戻す）
-├── getCurrentSettings()       # 現在のプロキシ設定を取得
-├── buildProxyConfig(profile)  # ProxyProfile → chrome.proxy.settings 用の設定に変換
-└── setupAuthHandler(profile)  # プロキシ認証ハンドラーの登録
+applyProfile(profile)       # ProxyProfile → chrome.proxy.settings.set()
+deactivateProxy()           # chrome.proxy.settings.set({ mode: "direct" })
+getAuthFromProfile(profile) # 認証情報の取得 (HTTP/HTTPS プロキシのみ)
+updateBadge(profile | null) # アイコンバッジの更新
 ```
 
-### 7.2 StorageManager (lib/storage-manager.js)
+### 7.2 storage.ts (src/lib/)
 
-`chrome.storage.local` のラッパー。
-
-```
-StorageManager
-├── getState()                        # AppState 全体を取得
-├── saveProfile(profile)              # プロファイルを保存
-├── deleteProfile(profileId)          # プロファイルを削除
-├── setActiveProfile(profileId|null)  # アクティブプロファイルを設定
-├── exportProfiles()                  # プロファイル一覧を JSON で返す
-└── importProfiles(profiles)          # JSON からプロファイルをインポート
-```
-
-### 7.3 Service Worker (background/service-worker.js)
+`@plasmohq/storage` ベースのストレージ操作。
 
 ```
-Service Worker
-├── onInstalled           # 初回インストール時のデフォルト設定
-├── onMessage             # Popup / Options からのメッセージハンドリング
-├── onStartup             # ブラウザ起動時にアクティブプロファイルを再適用
-└── updateBadge(profile)  # アイコンバッジの更新
+getState()                   # AppState 全体を取得
+getProfiles()                # 全プロファイルを取得
+saveProfile(profile)         # プロファイルを保存
+deleteProfile(profileId)     # プロファイルを削除
+setActiveProfileId(id|null)  # アクティブプロファイルを設定
+exportProfiles()             # JSON エクスポート
+importProfiles(profiles)     # JSON インポート
 ```
+
+### 7.3 Background Service Worker (src/background/index.ts)
+
+```
+onInstalled  → restoreActiveProxy()  # 初回インストール/更新時
+onStartup    → restoreActiveProxy()  # ブラウザ起動時
+setupAuthHandler(profile)            # webRequest.onAuthRequired (asyncBlocking)
+onProxyError → ログ出力              # プロキシエラーハンドリング
+```
+
+### 7.4 メッセージングハンドラー (src/background/messages/)
+
+`@plasmohq/messaging` を使用。ファイル名がメッセージ名に対応。
+
+| ファイル | リクエスト | レスポンス |
+|----------|-----------|-----------|
+| `get-state.ts` | `{}` | `AppState` |
+| `activate-profile.ts` | `{ profileId }` | `{ success, error? }` |
+| `deactivate-proxy.ts` | `{}` | `{ success, error? }` |
+| `save-profile.ts` | `{ profile }` | `{ success, error? }` |
+| `delete-profile.ts` | `{ profileId }` | `{ success, error? }` |
+| `export-profiles.ts` | `{}` | `{ data: string }` |
+| `import-profiles.ts` | `{ profiles }` | `{ success, error? }` |
 
 ## 8. UI 設計
 
@@ -466,10 +445,11 @@ Service Worker
 
 ## 10. 開発方針
 
-- **バニラ JS** で実装（フレームワーク不使用、依存関係ゼロ）
-- **ES Modules** を使用（`"type": "module"` in Service Worker）
+- **Plasmo Framework + TypeScript + React** で実装
+- **@plasmohq/messaging** でタイプセーフなメッセージング
+- **@plasmohq/storage** で `chrome.storage.local` を簡潔に操作
 - **Manifest V3** 準拠
-- **Chrome 88+** をサポート対象とする
+- **Chrome 108+** をサポート対象（`webRequestAuthProvider` / `asyncBlocking` 対応）
 
 ## 11. 実装フェーズ
 
