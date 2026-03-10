@@ -9,7 +9,7 @@ import {
   updateSingleProxyField
 } from "~lib/profile-utils"
 import type { AppState, ProxyProfile, ProxyType } from "~lib/types"
-import { PROFILE_COLORS } from "~lib/types"
+import { PROFILE_COLORS, PROFILE_COLOR_NAMES } from "~lib/types"
 
 import "./style.css"
 
@@ -111,7 +111,7 @@ function IndexPopup() {
 
   if (!state) {
     return (
-      <div className="popup-container">
+      <div className="popup-container" role="status" aria-live="polite">
         <p className="loading">読み込み中...</p>
       </div>
     )
@@ -122,42 +122,58 @@ function IndexPopup() {
     return (
       <div className="popup-container">
         <header className="popup-header">
-          <button className="icon-btn" onClick={handleCancelEdit} title="戻る">
+          <button
+            className="icon-btn"
+            onClick={handleCancelEdit}
+            aria-label="戻る">
             ←
           </button>
           <h1>新規プロファイル</h1>
           <span />
         </header>
 
-        <div className="popup-form">
+        <form
+          className="popup-form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSaveProfile()
+          }}>
           <div className="popup-form-group">
-            <label>プロファイル名</label>
+            <label htmlFor="popup-profile-name">プロファイル名</label>
             <input
+              id="popup-profile-name"
               type="text"
               value={editingProfile.name}
               onChange={(e) => updateField("name", e.target.value)}
               placeholder="例: Work Proxy"
               autoFocus
+              required
+              aria-required="true"
             />
           </div>
 
-          <div className="popup-form-group">
-            <label>色</label>
-            <div className="popup-color-picker">
-              {PROFILE_COLORS.map((color) => (
+          <fieldset className="popup-form-group" style={{ border: "none", padding: 0 }}>
+            <legend style={{ display: "block", marginBottom: "4px", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>色</legend>
+            <div className="popup-color-picker" role="radiogroup" aria-label="プロファイルの色を選択">
+              {PROFILE_COLORS.map((color, index) => (
                 <button
                   key={color}
+                  type="button"
                   className={`color-swatch ${editingProfile.color === color ? "selected" : ""}`}
                   style={{ backgroundColor: color }}
                   onClick={() => updateField("color", color)}
+                  role="radio"
+                  aria-checked={editingProfile.color === color}
+                  aria-label={PROFILE_COLOR_NAMES[index]}
                 />
               ))}
             </div>
-          </div>
+          </fieldset>
 
           <div className="popup-form-group">
-            <label>プロキシタイプ</label>
+            <label htmlFor="popup-proxy-type">プロキシタイプ</label>
             <select
+              id="popup-proxy-type"
               value={editingProfile.type}
               onChange={(e) =>
                 updateField("type", e.target.value as ProxyType)
@@ -172,8 +188,9 @@ function IndexPopup() {
           {editingProfile.type === "fixed_servers" && (
             <>
               <div className="popup-form-group">
-                <label>スキーム</label>
+                <label htmlFor="popup-scheme">スキーム</label>
                 <select
+                  id="popup-scheme"
                   value={
                     editingProfile.config.singleProxy?.scheme ?? "http"
                   }
@@ -188,8 +205,9 @@ function IndexPopup() {
               </div>
               <div className="popup-form-row">
                 <div className="popup-form-group popup-form-flex">
-                  <label>ホスト</label>
+                  <label htmlFor="popup-host">ホスト</label>
                   <input
+                    id="popup-host"
                     type="text"
                     value={editingProfile.config.singleProxy?.host ?? ""}
                     onChange={(e) =>
@@ -199,8 +217,9 @@ function IndexPopup() {
                   />
                 </div>
                 <div className="popup-form-group popup-form-port">
-                  <label>ポート</label>
+                  <label htmlFor="popup-port">ポート</label>
                   <input
+                    id="popup-port"
                     type="number"
                     value={editingProfile.config.singleProxy?.port ?? 8080}
                     onChange={(e) =>
@@ -217,8 +236,9 @@ function IndexPopup() {
 
           {editingProfile.type === "pac_script" && (
             <div className="popup-form-group">
-              <label>PAC URL</label>
+              <label htmlFor="popup-pac-url">PAC URL</label>
               <input
+                id="popup-pac-url"
                 type="text"
                 value={editingProfile.config.pacScript?.url ?? ""}
                 onChange={(e) =>
@@ -230,7 +250,7 @@ function IndexPopup() {
               />
             </div>
           )}
-        </div>
+        </form>
 
         <footer className="popup-form-actions">
           <button
@@ -242,7 +262,8 @@ function IndexPopup() {
           <button
             className="btn-popup-save"
             onClick={handleSaveProfile}
-            disabled={saving || !editingProfile.name.trim()}>
+            disabled={saving || !editingProfile.name.trim()}
+            aria-busy={saving}>
             {saving ? "保存中..." : "保存"}
           </button>
         </footer>
@@ -258,30 +279,34 @@ function IndexPopup() {
           <button
             className={`icon-btn ${state.devMode ? "dev-mode-active" : ""}`}
             onClick={handleToggleDevMode}
-            title={state.devMode ? "開発者モード: ON" : "開発者モード: OFF"}>
+            aria-label={state.devMode ? "開発者モード: ON" : "開発者モード: OFF"}
+            aria-pressed={state.devMode}>
             {"</>"}
           </button>
-          <button className="icon-btn" onClick={openOptions} title="設定">
+          <button className="icon-btn" onClick={openOptions} aria-label="設定を開く">
             ⚙
           </button>
         </div>
       </header>
 
       {state.devMode && (
-        <div className="dev-mode-banner">
+        <div className="dev-mode-banner" role="status">
           開発者モード有効 — 接続ログ記録中
         </div>
       )}
 
       {state.lastError && (
         <div
-          className={`error-banner ${state.lastError.fatal ? "fatal" : ""}`}>
+          className={`error-banner ${state.lastError.fatal ? "fatal" : ""}`}
+          role="alert"
+          aria-live="assertive">
           <div className="error-content">
-            <span className="error-icon">
+            <span className="error-icon" aria-hidden="true">
               {state.lastError.fatal ? "!!" : "!"}
             </span>
             <div className="error-text">
               <span className="error-message">
+                {state.lastError.fatal && <span className="sr-only">重大なエラー: </span>}
                 {state.lastError.message}
               </span>
               <span className="error-time">
@@ -292,13 +317,13 @@ function IndexPopup() {
           <button
             className="error-dismiss"
             onClick={handleDismissError}
-            title="閉じる">
+            aria-label="エラーメッセージを閉じる">
             ×
           </button>
         </div>
       )}
 
-      <div className="profile-list">
+      <div className="profile-list" role="radiogroup" aria-label="プロキシプロファイル">
         <label
           className={`profile-item ${!state.activeProfileId ? "active" : ""}`}>
           <input
@@ -307,6 +332,7 @@ function IndexPopup() {
             checked={!state.activeProfileId}
             onChange={handleDeactivate}
             disabled={loading}
+            aria-label="直接接続 (プロキシなし)"
           />
           <div className="profile-info">
             <span className="profile-name">直接接続 (プロキシなし)</span>
@@ -323,10 +349,12 @@ function IndexPopup() {
               checked={state.activeProfileId === profile.id}
               onChange={() => handleActivate(profile.id)}
               disabled={loading}
+              aria-label={`${profile.name} - ${getProfileSummary(profile)}`}
             />
             <span
               className="profile-color"
               style={{ backgroundColor: profile.color }}
+              aria-hidden="true"
             />
             <div className="profile-info">
               <span className="profile-name">{profile.name}</span>
@@ -343,6 +371,10 @@ function IndexPopup() {
           + 新規プロファイル
         </button>
       </footer>
+
+      <div aria-live="polite" className="sr-only">
+        {loading && "プロファイルを切り替え中..."}
+      </div>
     </div>
   )
 }

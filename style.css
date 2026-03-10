@@ -4,14 +4,16 @@
   --bg-secondary: #16213e;
   --bg-card: #0f3460;
   --bg-card-hover: #1a4a7a;
-  --text-primary: #e0e0e0;
-  --text-secondary: #a0a0b0;
+  --text-primary: #e8e8f0;
+  --text-secondary: #b0b0c4;
   --accent: #00bcd4;
   --accent-hover: #00acc1;
   --danger: #e74c3c;
   --danger-hover: #c0392b;
+  --success: #4caf50;
   --border: #2a2a4a;
   --radius: 8px;
+  --focus-ring: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent);
 }
 
 * {
@@ -24,8 +26,54 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
   font-size: 14px;
+  line-height: 1.5;
   color: var(--text-primary);
   background: var(--bg-primary);
+}
+
+/* === Focus Styles (Accessibility) === */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* === Skip Link (Accessibility) === */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  z-index: 1000;
+  border-radius: 0 0 var(--radius) 0;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* === Reduced Motion === */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* === Popup === */
@@ -50,12 +98,17 @@ body {
 
 .icon-btn {
   background: none;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-secondary);
   font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .icon-btn:hover {
@@ -67,6 +120,19 @@ body {
   padding: 32px;
   text-align: center;
   color: var(--text-secondary);
+}
+
+/* === Visually Hidden (screen reader only) === */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 .profile-list {
@@ -94,6 +160,9 @@ body {
 
 .profile-item input[type="radio"] {
   accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .profile-color {
@@ -101,6 +170,7 @@ body {
   height: 12px;
   border-radius: 50%;
   flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .profile-info {
@@ -132,13 +202,14 @@ body {
 
 .btn-add {
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   background: transparent;
   border: 1px dashed var(--border);
   border-radius: var(--radius);
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 13px;
+  min-height: 44px;
 }
 
 .btn-add:hover {
@@ -161,24 +232,26 @@ body {
   display: block;
   margin-bottom: 4px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
 .popup-form-group input,
 .popup-form-group select {
   width: 100%;
-  padding: 6px 10px;
+  padding: 8px 10px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-primary);
   font-size: 13px;
+  min-height: 36px;
 }
 
 .popup-form-group input:focus,
 .popup-form-group select:focus {
   outline: none;
+  box-shadow: var(--focus-ring);
   border-color: var(--accent);
 }
 
@@ -203,8 +276,8 @@ body {
 }
 
 .popup-color-picker .color-swatch {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
 }
 
 .popup-form-actions {
@@ -216,13 +289,14 @@ body {
 
 .btn-popup-cancel {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-primary);
   cursor: pointer;
   font-size: 13px;
+  min-height: 44px;
 }
 
 .btn-popup-cancel:hover {
@@ -231,14 +305,15 @@ body {
 
 .btn-popup-save {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
   background: var(--accent);
   border: none;
   border-radius: var(--radius);
   color: white;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  min-height: 44px;
 }
 
 .btn-popup-save:hover {
@@ -261,7 +336,7 @@ body {
   background: rgba(231, 76, 60, 0.15);
   border: 1px solid rgba(231, 76, 60, 0.4);
   border-radius: var(--radius);
-  color: #ff6b6b;
+  color: #ff8a80;
 }
 
 .error-banner.fatal {
@@ -311,12 +386,18 @@ body {
 .error-dismiss {
   flex-shrink: 0;
   background: none;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-secondary);
   font-size: 16px;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 2px 6px;
   line-height: 1;
+  border-radius: 4px;
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .error-dismiss:hover {
@@ -363,12 +444,13 @@ body {
   padding: 10px 12px;
   border-radius: var(--radius);
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   width: 100%;
   text-align: left;
   color: var(--text-primary);
   font-size: 14px;
+  min-height: 44px;
 }
 
 .sidebar-item:hover {
@@ -389,16 +471,18 @@ body {
 }
 
 .sidebar-footer button {
-  padding: 8px;
+  padding: 10px;
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
   font-size: 13px;
+  min-height: 44px;
 }
 
 .btn-primary {
   background: var(--accent);
   color: white;
+  font-weight: 600;
 }
 
 .btn-primary:hover {
@@ -417,10 +501,17 @@ body {
 .btn-danger {
   background: var(--danger);
   color: white;
+  font-weight: 600;
 }
 
 .btn-danger:hover {
   background: var(--danger-hover);
+}
+
+/* Disabled state for all buttons */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* === Editor Panel === */
@@ -452,7 +543,7 @@ body {
   display: block;
   margin-bottom: 6px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
@@ -466,12 +557,14 @@ body {
   border-radius: var(--radius);
   color: var(--text-primary);
   font-size: 14px;
+  min-height: 40px;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
+  box-shadow: var(--focus-ring);
   border-color: var(--accent);
 }
 
@@ -497,12 +590,15 @@ body {
 }
 
 .color-swatch {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
   transition: border-color 0.15s;
+  position: relative;
+  min-width: 32px;
+  min-height: 32px;
 }
 
 .color-swatch:hover {
@@ -511,6 +607,20 @@ body {
 
 .color-swatch.selected {
   border-color: white;
+  box-shadow: 0 0 0 2px var(--bg-primary);
+}
+
+.color-swatch.selected::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 6px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: translate(-50%, -60%) rotate(-45deg);
 }
 
 .section {
@@ -536,6 +646,8 @@ body {
 
 .checkbox-group input[type="checkbox"] {
   accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
 }
 
 .bypass-list {
@@ -557,11 +669,17 @@ body {
 
 .bypass-tag button {
   background: none;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 14px;
-  padding: 0 2px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  min-width: 24px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .bypass-tag button:hover {
@@ -584,6 +702,7 @@ body {
   border-radius: var(--radius);
   color: var(--text-primary);
   cursor: pointer;
+  min-height: 40px;
 }
 
 .editor-actions {
@@ -598,7 +717,8 @@ body {
   border-radius: var(--radius);
   cursor: pointer;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  min-height: 44px;
 }
 
 /* === Popup Developer Mode === */
@@ -609,17 +729,25 @@ body {
 }
 
 .icon-btn.dev-mode-active {
-  color: #4caf50;
+  color: var(--success);
   background: rgba(76, 175, 80, 0.15);
 }
 
 .dev-mode-banner {
-  padding: 6px 12px;
+  padding: 8px 12px;
   background: rgba(76, 175, 80, 0.15);
   border-bottom: 1px solid rgba(76, 175, 80, 0.3);
-  color: #81c784;
+  color: #a5d6a7;
   font-size: 12px;
   text-align: center;
+}
+
+/* === Active profile indicator === */
+.active-indicator {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* === Sidebar Navigation === */
@@ -638,6 +766,7 @@ body {
   font-size: 13px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
+  min-height: 44px;
 }
 
 .sidebar-nav-item:hover {
@@ -647,6 +776,7 @@ body {
 .sidebar-nav-item.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
+  font-weight: 600;
 }
 
 /* === Sidebar Developer Mode === */
@@ -660,22 +790,23 @@ body {
 
 .dev-status-label {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .dev-toggle {
-  padding: 4px 12px;
+  padding: 6px 14px;
   border: none;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
+  min-height: 32px;
 }
 
 .dev-toggle.on {
-  background: #4caf50;
+  background: var(--success);
   color: white;
 }
 
@@ -721,10 +852,12 @@ body {
   border-radius: var(--radius);
   color: var(--text-primary);
   font-size: 13px;
+  min-height: 40px;
 }
 
 .log-filter:focus {
   outline: none;
+  box-shadow: var(--focus-ring);
   border-color: var(--accent);
 }
 
@@ -764,6 +897,10 @@ body {
   white-space: nowrap;
 }
 
+.log-table th[aria-sort] {
+  cursor: pointer;
+}
+
 .log-table td {
   padding: 6px 10px;
   border-bottom: 1px solid rgba(42, 42, 74, 0.5);
@@ -775,7 +912,7 @@ body {
 }
 
 .log-table tr.log-error {
-  color: #ff6b6b;
+  color: #ff8a80;
 }
 
 .log-table tr.log-error:hover {
@@ -792,11 +929,11 @@ body {
 }
 
 .log-status {
-  color: #81c784;
+  color: #a5d6a7;
 }
 
 .log-status.status-error {
-  color: #ff6b6b;
+  color: #ff8a80;
 }
 
 .log-type {

@@ -47,6 +47,18 @@ export const PROFILE_COLORS = [
   "#00BCD4" // cyan
 ] as const
 
+/** 色のアクセシブルな名前（スクリーンリーダー用） */
+export const PROFILE_COLOR_NAMES = [
+  "グリーン",
+  "ブルー",
+  "アンバー",
+  "レッド",
+  "パープル",
+  "ブルーグレー",
+  "オレンジ",
+  "シアン"
+] as const
+
 /** プロキシプロファイル */
 export interface ProxyProfile {
   id: string

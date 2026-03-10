@@ -15,7 +15,7 @@ import type {
   ProxyProfile,
   ProxyType
 } from "~lib/types"
-import { PROFILE_COLORS } from "~lib/types"
+import { PROFILE_COLORS, PROFILE_COLOR_NAMES } from "~lib/types"
 
 import "./style.css"
 
@@ -202,7 +202,7 @@ function IndexOptions() {
 
   if (!state) {
     return (
-      <div className="options-container">
+      <div className="options-container" role="status" aria-live="polite">
         <p className="loading">読み込み中...</p>
       </div>
     )
@@ -211,37 +211,47 @@ function IndexOptions() {
   return (
     <div className="options-container">
       {/* サイドバー */}
-      <div className="sidebar">
-        <div className="sidebar-nav">
+      <nav className="sidebar" aria-label="サイドバーナビゲーション">
+        <div className="sidebar-nav" role="tablist" aria-label="メインナビゲーション">
           <button
             className={`sidebar-nav-item ${currentView === "profiles" ? "active" : ""}`}
-            onClick={() => setCurrentView("profiles")}>
+            onClick={() => setCurrentView("profiles")}
+            role="tab"
+            aria-selected={currentView === "profiles"}
+            aria-controls="panel-profiles"
+            id="tab-profiles">
             プロファイル
           </button>
           <button
             className={`sidebar-nav-item ${currentView === "devtools" ? "active" : ""}`}
-            onClick={() => setCurrentView("devtools")}>
+            onClick={() => setCurrentView("devtools")}
+            role="tab"
+            aria-selected={currentView === "devtools"}
+            aria-controls="panel-devtools"
+            id="tab-devtools">
             {"</>"} 開発者ツール
           </button>
         </div>
 
         {currentView === "profiles" && (
           <>
-            <div className="sidebar-profiles">
+            <div className="sidebar-profiles" role="list" aria-label="プロファイル一覧">
               {state.profiles.map((profile) => (
                 <button
                   key={profile.id}
                   className={`sidebar-item ${selectedId === profile.id ? "selected" : ""}`}
-                  onClick={() => selectProfile(profile)}>
+                  onClick={() => selectProfile(profile)}
+                  role="listitem"
+                  aria-current={selectedId === profile.id ? "true" : undefined}>
                   <span
                     className="profile-color"
                     style={{ backgroundColor: profile.color }}
+                    aria-hidden="true"
                   />
                   {profile.name}
                   {state.activeProfileId === profile.id && (
-                    <span
-                      style={{ color: "var(--accent)", marginLeft: "auto" }}>
-                      ●
+                    <span className="active-indicator" aria-label="有効">
+                      ● 有効
                     </span>
                   )}
                 </button>
@@ -265,15 +275,18 @@ function IndexOptions() {
           <>
             <div className="sidebar-profiles">
               <div className="sidebar-dev-status">
-                <span className="dev-status-label">開発者モード</span>
+                <span className="dev-status-label" id="dev-mode-label">開発者モード</span>
                 <button
                   className={`dev-toggle ${state.devMode ? "on" : "off"}`}
-                  onClick={handleToggleDevMode}>
+                  onClick={handleToggleDevMode}
+                  role="switch"
+                  aria-checked={state.devMode}
+                  aria-labelledby="dev-mode-label">
                   {state.devMode ? "ON" : "OFF"}
                 </button>
               </div>
               {state.devMode && (
-                <div className="sidebar-dev-info">
+                <div className="sidebar-dev-info" aria-live="polite">
                   <span>ログ件数: {connectionLogs.length}</span>
                 </div>
               )}
@@ -288,10 +301,10 @@ function IndexOptions() {
             </div>
           </>
         )}
-      </div>
+      </nav>
 
       {/* エディターパネル */}
-      <div className="editor-panel">
+      <main className="editor-panel" id={`panel-${currentView}`} role="tabpanel" aria-labelledby={`tab-${currentView}`}>
         {currentView === "devtools" ? (
           <div className="devtools-panel">
             <h2>接続ログ</h2>
@@ -302,27 +315,31 @@ function IndexOptions() {
             ) : (
               <>
                 <div className="log-toolbar">
+                  <label htmlFor="log-filter-input" className="sr-only">
+                    ログをフィルタ
+                  </label>
                   <input
+                    id="log-filter-input"
                     type="text"
                     className="log-filter"
                     value={logFilter}
                     onChange={(e) => setLogFilter(e.target.value)}
                     placeholder="URL、メソッド、タイプでフィルタ..."
                   />
-                  <span className="log-count">
+                  <span className="log-count" aria-live="polite">
                     {filteredLogs.length} / {connectionLogs.length} 件
                   </span>
                 </div>
-                <div className="log-table-container">
-                  <table className="log-table">
+                <div className="log-table-container" tabIndex={0} role="region" aria-label="接続ログテーブル">
+                  <table className="log-table" aria-label="接続ログ">
                     <thead>
                       <tr>
-                        <th>時刻</th>
-                        <th>メソッド</th>
-                        <th>ステータス</th>
-                        <th>タイプ</th>
-                        <th>URL</th>
-                        <th>IP</th>
+                        <th scope="col">時刻</th>
+                        <th scope="col">メソッド</th>
+                        <th scope="col">ステータス</th>
+                        <th scope="col">タイプ</th>
+                        <th scope="col">URL</th>
+                        <th scope="col">IP</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -337,7 +354,7 @@ function IndexOptions() {
                           <td
                             className={`log-status ${log.statusCode && log.statusCode >= 400 ? "status-error" : ""}`}>
                             {log.error ? (
-                              <span title={log.error}>ERR</span>
+                              <span title={log.error} aria-label={`エラー: ${log.error}`}>ERR</span>
                             ) : (
                               log.statusCode
                             )}
@@ -378,32 +395,39 @@ function IndexOptions() {
 
             {/* 基本情報 */}
             <div className="form-group">
-              <label>プロファイル名</label>
+              <label htmlFor="opt-profile-name">プロファイル名</label>
               <input
+                id="opt-profile-name"
                 type="text"
                 value={editingProfile.name}
                 onChange={(e) => updateField("name", e.target.value)}
                 placeholder="例: Work Proxy"
+                aria-required="true"
               />
             </div>
 
-            <div className="form-group">
-              <label>色</label>
-              <div className="color-picker">
-                {PROFILE_COLORS.map((color) => (
+            <fieldset className="form-group" style={{ border: "none", padding: 0 }}>
+              <legend style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>色</legend>
+              <div className="color-picker" role="radiogroup" aria-label="プロファイルの色を選択">
+                {PROFILE_COLORS.map((color, index) => (
                   <button
                     key={color}
+                    type="button"
                     className={`color-swatch ${editingProfile.color === color ? "selected" : ""}`}
                     style={{ backgroundColor: color }}
                     onClick={() => updateField("color", color)}
+                    role="radio"
+                    aria-checked={editingProfile.color === color}
+                    aria-label={PROFILE_COLOR_NAMES[index]}
                   />
                 ))}
               </div>
-            </div>
+            </fieldset>
 
             <div className="form-group">
-              <label>プロキシタイプ</label>
+              <label htmlFor="opt-proxy-type">プロキシタイプ</label>
               <select
+                id="opt-proxy-type"
                 value={editingProfile.type}
                 onChange={(e) =>
                   updateField("type", e.target.value as ProxyType)
@@ -421,8 +445,9 @@ function IndexOptions() {
                 <h3>サーバー設定</h3>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>スキーム</label>
+                    <label htmlFor="opt-scheme">スキーム</label>
                     <select
+                      id="opt-scheme"
                       value={
                         editingProfile.config.singleProxy?.scheme ?? "http"
                       }
@@ -436,8 +461,9 @@ function IndexOptions() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>ホスト</label>
+                    <label htmlFor="opt-host">ホスト</label>
                     <input
+                      id="opt-host"
                       type="text"
                       value={editingProfile.config.singleProxy?.host ?? ""}
                       onChange={(e) =>
@@ -447,8 +473,9 @@ function IndexOptions() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>ポート</label>
+                    <label htmlFor="opt-port">ポート</label>
                     <input
+                      id="opt-port"
                       type="number"
                       value={editingProfile.config.singleProxy?.port ?? 8080}
                       onChange={(e) =>
@@ -479,8 +506,9 @@ function IndexOptions() {
                 {editingProfile.config.singleProxy?.auth && (
                   <div className="form-row">
                     <div className="form-group">
-                      <label>ユーザー名</label>
+                      <label htmlFor="opt-username">ユーザー名</label>
                       <input
+                        id="opt-username"
                         type="text"
                         value={
                           editingProfile.config.singleProxy.auth.username
@@ -490,11 +518,13 @@ function IndexOptions() {
                             updateProxyAuthField(editingProfile, "username", e.target.value)
                           )
                         }
+                        autoComplete="username"
                       />
                     </div>
                     <div className="form-group">
-                      <label>パスワード</label>
+                      <label htmlFor="opt-password">パスワード</label>
                       <input
+                        id="opt-password"
                         type="password"
                         value={
                           editingProfile.config.singleProxy.auth.password
@@ -504,6 +534,7 @@ function IndexOptions() {
                             updateProxyAuthField(editingProfile, "password", e.target.value)
                           )
                         }
+                        autoComplete="current-password"
                       />
                     </div>
                   </div>
@@ -516,10 +547,11 @@ function IndexOptions() {
               <div className="section">
                 <h3>PAC スクリプト</h3>
                 <div className="form-group">
-                  <label>
+                  <label htmlFor="opt-pac-url">
                     PAC URL (URL またはインラインスクリプトのいずれかを指定)
                   </label>
                   <input
+                    id="opt-pac-url"
                     type="text"
                     value={editingProfile.config.pacScript?.url ?? ""}
                     onChange={(e) =>
@@ -531,8 +563,9 @@ function IndexOptions() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>インラインスクリプト</label>
+                  <label htmlFor="opt-pac-data">インラインスクリプト</label>
                   <textarea
+                    id="opt-pac-data"
                     value={editingProfile.config.pacScript?.data ?? ""}
                     onChange={(e) =>
                       setEditingProfile(
@@ -548,19 +581,25 @@ function IndexOptions() {
             {/* バイパスリスト */}
             {editingProfile.type === "fixed_servers" && (
               <div className="section">
-                <h3>バイパスリスト</h3>
-                <div className="bypass-list">
+                <h3 id="bypass-heading">バイパスリスト</h3>
+                <div className="bypass-list" role="list" aria-labelledby="bypass-heading">
                   {editingProfile.bypassList.map((item) => (
-                    <span key={item} className="bypass-tag">
+                    <span key={item} className="bypass-tag" role="listitem">
                       {item}
-                      <button onClick={() => removeBypassItem(item)}>
+                      <button
+                        onClick={() => removeBypassItem(item)}
+                        aria-label={`${item} を削除`}>
                         ×
                       </button>
                     </span>
                   ))}
                 </div>
                 <div className="bypass-input-row">
+                  <label htmlFor="opt-bypass-input" className="sr-only">
+                    バイパスルールを追加
+                  </label>
                   <input
+                    id="opt-bypass-input"
                     type="text"
                     value={bypassInput}
                     onChange={(e) => setBypassInput(e.target.value)}
@@ -585,7 +624,7 @@ function IndexOptions() {
             </div>
           </>
         )}
-      </div>
+      </main>
     </div>
   )
 }
