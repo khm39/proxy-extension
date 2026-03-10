@@ -92,6 +92,7 @@ function IndexPopup() {
       body: { enabled: !state?.devMode }
     })
     await fetchState()
+  }
 
   const handleNewProfile = () => {
     setEditingProfile(createEmptyProfile())
