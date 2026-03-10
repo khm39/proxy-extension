@@ -9,7 +9,9 @@ function getProfileSummary(profile: ProxyProfile): string {
   if (profile.type === "direct") return "直接接続"
   if (profile.type === "system") return "システム設定"
   if (profile.type === "pac_script") {
-    return profile.config.pacScript?.url ? `PAC: ${profile.config.pacScript.url}` : "PAC スクリプト"
+    return profile.config.pacScript?.url
+      ? `PAC: ${profile.config.pacScript.url}`
+      : "PAC スクリプト"
   }
 
   const proxy =
@@ -20,7 +22,7 @@ function getProfileSummary(profile: ProxyProfile): string {
   return `${proxy.scheme.toUpperCase()} ${proxy.host}:${proxy.port}`
 }
 
-export default function Popup() {
+function IndexPopup() {
   const [state, setState] = useState<AppState | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -55,7 +57,11 @@ export default function Popup() {
   }
 
   if (!state) {
-    return <div className="popup-container"><p className="loading">読み込み中...</p></div>
+    return (
+      <div className="popup-container">
+        <p className="loading">読み込み中...</p>
+      </div>
+    )
   }
 
   return (
@@ -115,3 +121,5 @@ export default function Popup() {
     </div>
   )
 }
+
+export default IndexPopup

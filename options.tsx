@@ -31,7 +31,7 @@ function createEmptyProfile(): ProxyProfile {
   }
 }
 
-export default function Options() {
+function IndexOptions() {
   const [state, setState] = useState<AppState | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingProfile, setEditingProfile] = useState<ProxyProfile | null>(
@@ -145,7 +145,10 @@ export default function Options() {
   const addBypassItem = () => {
     if (!editingProfile || !bypassInput.trim()) return
     if (editingProfile.bypassList.includes(bypassInput.trim())) return
-    updateField("bypassList", [...editingProfile.bypassList, bypassInput.trim()])
+    updateField("bypassList", [
+      ...editingProfile.bypassList,
+      bypassInput.trim()
+    ])
     setBypassInput("")
   }
 
@@ -265,7 +268,9 @@ export default function Options() {
                   <div className="form-group">
                     <label>スキーム</label>
                     <select
-                      value={editingProfile.config.singleProxy?.scheme ?? "http"}
+                      value={
+                        editingProfile.config.singleProxy?.scheme ?? "http"
+                      }
                       onChange={(e) =>
                         updateProxyField("scheme", e.target.value)
                       }>
@@ -280,7 +285,9 @@ export default function Options() {
                     <input
                       type="text"
                       value={editingProfile.config.singleProxy?.host ?? ""}
-                      onChange={(e) => updateProxyField("host", e.target.value)}
+                      onChange={(e) =>
+                        updateProxyField("host", e.target.value)
+                      }
                       placeholder="proxy.example.com"
                     />
                   </div>
@@ -290,7 +297,10 @@ export default function Options() {
                       type="number"
                       value={editingProfile.config.singleProxy?.port ?? 8080}
                       onChange={(e) =>
-                        updateProxyField("port", parseInt(e.target.value) || 0)
+                        updateProxyField(
+                          "port",
+                          parseInt(e.target.value) || 0
+                        )
                       }
                     />
                   </div>
@@ -384,7 +394,9 @@ export default function Options() {
               <div className="section">
                 <h3>PAC スクリプト</h3>
                 <div className="form-group">
-                  <label>PAC URL (URL またはインラインスクリプトのいずれかを指定)</label>
+                  <label>
+                    PAC URL (URL またはインラインスクリプトのいずれかを指定)
+                  </label>
                   <input
                     type="text"
                     value={editingProfile.config.pacScript?.url ?? ""}
@@ -433,7 +445,9 @@ export default function Options() {
                   {editingProfile.bypassList.map((item) => (
                     <span key={item} className="bypass-tag">
                       {item}
-                      <button onClick={() => removeBypassItem(item)}>×</button>
+                      <button onClick={() => removeBypassItem(item)}>
+                        ×
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -467,3 +481,5 @@ export default function Options() {
     </div>
   )
 }
+
+export default IndexOptions

@@ -1,10 +1,7 @@
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 
 import { deactivateProxy, updateBadge } from "~lib/proxy-manager"
-import {
-  deleteProfile,
-  getActiveProfileId
-} from "~lib/storage"
+import { deleteProfile, getActiveProfileId } from "~lib/storage"
 
 export type RequestBody = { profileId: string }
 export type ResponseBody = { success: boolean; error?: string }
@@ -17,7 +14,6 @@ const handler: PlasmoMessaging.MessageHandler<
     const activeId = await getActiveProfileId()
     const { profileId } = req.body
 
-    // アクティブなプロファイルが削除される場合はプロキシも解除
     if (activeId === profileId) {
       await deactivateProxy()
       await updateBadge(null)
