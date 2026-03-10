@@ -1,21 +1,11 @@
 import { sendToBackground } from "@plasmohq/messaging"
 import { useEffect, useState } from "react"
 
-import {
-  createEmptyProfile,
-  toggleProxyAuth,
-  updatePacScriptField,
-  updateProfileField,
-  updateProxyAuthField,
-  updateSingleProxyField
-} from "~lib/profile-utils"
-import type {
-  AppState,
-  ConnectionLogEntry,
-  ProxyProfile,
-  ProxyType
-} from "~lib/types"
-import { PROFILE_COLORS, PROFILE_COLOR_NAMES } from "~lib/types"
+import { createEmptyProfile } from "~lib/profile-utils"
+import type { AppState, ConnectionLogEntry, ProxyProfile } from "~lib/types"
+
+import { DevToolsPanel } from "~components/DevToolsPanel"
+import { ProfileEditor } from "~components/ProfileEditor"
 
 import "./style.css"
 
@@ -27,12 +17,10 @@ function IndexOptions() {
   const [editingProfile, setEditingProfile] = useState<ProxyProfile | null>(
     null
   )
-  const [bypassInput, setBypassInput] = useState("")
   const [currentView, setCurrentView] = useState<OptionsView>("profiles")
   const [connectionLogs, setConnectionLogs] = useState<ConnectionLogEntry[]>(
     []
   )
-  const [logFilter, setLogFilter] = useState("")
 
   const fetchState = async () => {
     const result = await sendToBackground({ name: "get-state" })
@@ -142,40 +130,6 @@ function IndexOptions() {
     input.click()
   }
 
-  const updateField = <K extends keyof ProxyProfile>(
-    key: K,
-    value: ProxyProfile[K]
-  ) => {
-    if (!editingProfile) return
-    setEditingProfile(updateProfileField(editingProfile, key, value))
-  }
-
-  const updateProxyField = (
-    field: "scheme" | "host" | "port",
-    value: string | number
-  ) => {
-    if (!editingProfile) return
-    setEditingProfile(updateSingleProxyField(editingProfile, field, value))
-  }
-
-  const addBypassItem = () => {
-    if (!editingProfile || !bypassInput.trim()) return
-    if (editingProfile.bypassList.includes(bypassInput.trim())) return
-    updateField("bypassList", [
-      ...editingProfile.bypassList,
-      bypassInput.trim()
-    ])
-    setBypassInput("")
-  }
-
-  const removeBypassItem = (item: string) => {
-    if (!editingProfile) return
-    updateField(
-      "bypassList",
-      editingProfile.bypassList.filter((b) => b !== item)
-    )
-  }
-
   const handleToggleDevMode = async () => {
     await sendToBackground({
       name: "toggle-dev-mode",
@@ -189,17 +143,6 @@ function IndexOptions() {
     setConnectionLogs([])
   }
 
-  const filteredLogs = connectionLogs
-    .filter(
-      (log) =>
-        !logFilter ||
-        log.url.toLowerCase().includes(logFilter.toLowerCase()) ||
-        log.method.toLowerCase().includes(logFilter.toLowerCase()) ||
-        log.type.toLowerCase().includes(logFilter.toLowerCase()) ||
-        (log.error && log.error.toLowerCase().includes(logFilter.toLowerCase()))
-    )
-    .reverse()
-
   if (!state) {
     return (
       <div className="options-container" role="status" aria-live="polite">
@@ -208,11 +151,18 @@ function IndexOptions() {
     )
   }
 
+  const isNewProfile =
+    editingProfile != null &&
+    !state.profiles.find((p) => p.id === editingProfile.id)
+
   return (
     <div className="options-container">
       {/* サイドバー */}
       <nav className="sidebar" aria-label="サイドバーナビゲーション">
-        <div className="sidebar-nav" role="tablist" aria-label="メインナビゲーション">
+        <div
+          className="sidebar-nav"
+          role="tablist"
+          aria-label="メインナビゲーション">
           <button
             className={`sidebar-nav-item ${currentView === "profiles" ? "active" : ""}`}
             onClick={() => setCurrentView("profiles")}
@@ -235,14 +185,19 @@ function IndexOptions() {
 
         {currentView === "profiles" && (
           <>
-            <div className="sidebar-profiles" role="list" aria-label="プロファイル一覧">
+            <div
+              className="sidebar-profiles"
+              role="list"
+              aria-label="プロファイル一覧">
               {state.profiles.map((profile) => (
                 <button
                   key={profile.id}
                   className={`sidebar-item ${selectedId === profile.id ? "selected" : ""}`}
                   onClick={() => selectProfile(profile)}
                   role="listitem"
-                  aria-current={selectedId === profile.id ? "true" : undefined}>
+                  aria-current={
+                    selectedId === profile.id ? "true" : undefined
+                  }>
                   <span
                     className="profile-color"
                     style={{ backgroundColor: profile.color }}
@@ -275,7 +230,9 @@ function IndexOptions() {
           <>
             <div className="sidebar-profiles">
               <div className="sidebar-dev-status">
-                <span className="dev-status-label" id="dev-mode-label">開発者モード</span>
+                <span className="dev-status-label" id="dev-mode-label">
+                  開発者モード
+                </span>
                 <button
                   className={`dev-toggle ${state.devMode ? "on" : "off"}`}
                   onClick={handleToggleDevMode}
@@ -304,325 +261,25 @@ function IndexOptions() {
       </nav>
 
       {/* エディターパネル */}
-      <main className="editor-panel" id={`panel-${currentView}`} role="tabpanel" aria-labelledby={`tab-${currentView}`}>
+      <main
+        className="editor-panel"
+        id={`panel-${currentView}`}
+        role="tabpanel"
+        aria-labelledby={`tab-${currentView}`}>
         {currentView === "devtools" ? (
-          <div className="devtools-panel">
-            <h2>接続ログ</h2>
-            {!state.devMode ? (
-              <div className="empty-state">
-                開発者モードを有効にすると接続ログの記録が開始されます
-              </div>
-            ) : (
-              <>
-                <div className="log-toolbar">
-                  <label htmlFor="log-filter-input" className="sr-only">
-                    ログをフィルタ
-                  </label>
-                  <input
-                    id="log-filter-input"
-                    type="text"
-                    className="log-filter"
-                    value={logFilter}
-                    onChange={(e) => setLogFilter(e.target.value)}
-                    placeholder="URL、メソッド、タイプでフィルタ..."
-                  />
-                  <span className="log-count" aria-live="polite">
-                    {filteredLogs.length} / {connectionLogs.length} 件
-                  </span>
-                </div>
-                <div className="log-table-container" tabIndex={0} role="region" aria-label="接続ログテーブル">
-                  <table className="log-table" aria-label="接続ログ">
-                    <thead>
-                      <tr>
-                        <th scope="col">時刻</th>
-                        <th scope="col">メソッド</th>
-                        <th scope="col">ステータス</th>
-                        <th scope="col">タイプ</th>
-                        <th scope="col">URL</th>
-                        <th scope="col">IP</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredLogs.map((log) => (
-                        <tr
-                          key={log.id}
-                          className={log.error ? "log-error" : ""}>
-                          <td className="log-time">
-                            {new Date(log.timestamp).toLocaleTimeString()}
-                          </td>
-                          <td className="log-method">{log.method}</td>
-                          <td
-                            className={`log-status ${log.statusCode && log.statusCode >= 400 ? "status-error" : ""}`}>
-                            {log.error ? (
-                              <span title={log.error} aria-label={`エラー: ${log.error}`}>ERR</span>
-                            ) : (
-                              log.statusCode
-                            )}
-                          </td>
-                          <td className="log-type">{log.type}</td>
-                          <td className="log-url" title={log.url}>
-                            {log.url}
-                          </td>
-                          <td className="log-ip">{log.ip ?? "-"}</td>
-                        </tr>
-                      ))}
-                      {filteredLogs.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="log-empty">
-                            {connectionLogs.length === 0
-                              ? "ログがありません"
-                              : "フィルタに一致するログがありません"}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
+          <DevToolsPanel devMode={state.devMode} logs={connectionLogs} />
         ) : !editingProfile ? (
           <div className="empty-state">
             プロファイルを選択するか、新規作成してください
           </div>
         ) : (
-          <>
-            <h2>
-              {state.profiles.find((p) => p.id === editingProfile.id)
-                ? "プロファイルを編集"
-                : "新規プロファイル"}
-            </h2>
-
-            {/* 基本情報 */}
-            <div className="form-group">
-              <label htmlFor="opt-profile-name">プロファイル名</label>
-              <input
-                id="opt-profile-name"
-                type="text"
-                value={editingProfile.name}
-                onChange={(e) => updateField("name", e.target.value)}
-                placeholder="例: Work Proxy"
-                aria-required="true"
-              />
-            </div>
-
-            <fieldset className="form-group" style={{ border: "none", padding: 0 }}>
-              <legend style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>色</legend>
-              <div className="color-picker" role="radiogroup" aria-label="プロファイルの色を選択">
-                {PROFILE_COLORS.map((color, index) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`color-swatch ${editingProfile.color === color ? "selected" : ""}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => updateField("color", color)}
-                    role="radio"
-                    aria-checked={editingProfile.color === color}
-                    aria-label={PROFILE_COLOR_NAMES[index]}
-                  />
-                ))}
-              </div>
-            </fieldset>
-
-            <div className="form-group">
-              <label htmlFor="opt-proxy-type">プロキシタイプ</label>
-              <select
-                id="opt-proxy-type"
-                value={editingProfile.type}
-                onChange={(e) =>
-                  updateField("type", e.target.value as ProxyType)
-                }>
-                <option value="fixed_servers">固定サーバー</option>
-                <option value="pac_script">PAC スクリプト</option>
-                <option value="direct">直接接続</option>
-                <option value="system">システム設定</option>
-              </select>
-            </div>
-
-            {/* 固定サーバー設定 */}
-            {editingProfile.type === "fixed_servers" && (
-              <div className="section">
-                <h3>サーバー設定</h3>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="opt-scheme">スキーム</label>
-                    <select
-                      id="opt-scheme"
-                      value={
-                        editingProfile.config.singleProxy?.scheme ?? "http"
-                      }
-                      onChange={(e) =>
-                        updateProxyField("scheme", e.target.value)
-                      }>
-                      <option value="http">HTTP</option>
-                      <option value="https">HTTPS</option>
-                      <option value="socks4">SOCKS4</option>
-                      <option value="socks5">SOCKS5</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="opt-host">ホスト</label>
-                    <input
-                      id="opt-host"
-                      type="text"
-                      value={editingProfile.config.singleProxy?.host ?? ""}
-                      onChange={(e) =>
-                        updateProxyField("host", e.target.value)
-                      }
-                      placeholder="proxy.example.com"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="opt-port">ポート</label>
-                    <input
-                      id="opt-port"
-                      type="number"
-                      value={editingProfile.config.singleProxy?.port ?? 8080}
-                      onChange={(e) =>
-                        updateProxyField(
-                          "port",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-
-                {/* 認証設定 */}
-                <div className="checkbox-group">
-                  <input
-                    type="checkbox"
-                    id="use-auth"
-                    checked={!!editingProfile.config.singleProxy?.auth}
-                    onChange={(e) =>
-                      setEditingProfile(
-                        toggleProxyAuth(editingProfile, e.target.checked)
-                      )
-                    }
-                  />
-                  <label htmlFor="use-auth">認証を使用する</label>
-                </div>
-
-                {editingProfile.config.singleProxy?.auth && (
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="opt-username">ユーザー名</label>
-                      <input
-                        id="opt-username"
-                        type="text"
-                        value={
-                          editingProfile.config.singleProxy.auth.username
-                        }
-                        onChange={(e) =>
-                          setEditingProfile(
-                            updateProxyAuthField(editingProfile, "username", e.target.value)
-                          )
-                        }
-                        autoComplete="username"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="opt-password">パスワード</label>
-                      <input
-                        id="opt-password"
-                        type="password"
-                        value={
-                          editingProfile.config.singleProxy.auth.password
-                        }
-                        onChange={(e) =>
-                          setEditingProfile(
-                            updateProxyAuthField(editingProfile, "password", e.target.value)
-                          )
-                        }
-                        autoComplete="current-password"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* PAC スクリプト設定 */}
-            {editingProfile.type === "pac_script" && (
-              <div className="section">
-                <h3>PAC スクリプト</h3>
-                <div className="form-group">
-                  <label htmlFor="opt-pac-url">
-                    PAC URL (URL またはインラインスクリプトのいずれかを指定)
-                  </label>
-                  <input
-                    id="opt-pac-url"
-                    type="text"
-                    value={editingProfile.config.pacScript?.url ?? ""}
-                    onChange={(e) =>
-                      setEditingProfile(
-                        updatePacScriptField(editingProfile, "url", e.target.value)
-                      )
-                    }
-                    placeholder="https://example.com/proxy.pac"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="opt-pac-data">インラインスクリプト</label>
-                  <textarea
-                    id="opt-pac-data"
-                    value={editingProfile.config.pacScript?.data ?? ""}
-                    onChange={(e) =>
-                      setEditingProfile(
-                        updatePacScriptField(editingProfile, "data", e.target.value)
-                      )
-                    }
-                    placeholder={`function FindProxyForURL(url, host) {\n  return "DIRECT";\n}`}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* バイパスリスト */}
-            {editingProfile.type === "fixed_servers" && (
-              <div className="section">
-                <h3 id="bypass-heading">バイパスリスト</h3>
-                <div className="bypass-list" role="list" aria-labelledby="bypass-heading">
-                  {editingProfile.bypassList.map((item) => (
-                    <span key={item} className="bypass-tag" role="listitem">
-                      {item}
-                      <button
-                        onClick={() => removeBypassItem(item)}
-                        aria-label={`${item} を削除`}>
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="bypass-input-row">
-                  <label htmlFor="opt-bypass-input" className="sr-only">
-                    バイパスルールを追加
-                  </label>
-                  <input
-                    id="opt-bypass-input"
-                    type="text"
-                    value={bypassInput}
-                    onChange={(e) => setBypassInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addBypassItem()}
-                    placeholder="例: *.local"
-                  />
-                  <button onClick={addBypassItem}>追加</button>
-                </div>
-              </div>
-            )}
-
-            {/* アクション */}
-            <div className="editor-actions">
-              <button className="btn-primary" onClick={handleSave}>
-                保存
-              </button>
-              {state.profiles.find((p) => p.id === editingProfile.id) && (
-                <button className="btn-danger" onClick={handleDelete}>
-                  削除
-                </button>
-              )}
-            </div>
-          </>
+          <ProfileEditor
+            profile={editingProfile}
+            isNew={isNewProfile}
+            onChange={setEditingProfile}
+            onSave={handleSave}
+            onDelete={handleDelete}
+          />
         )}
       </main>
     </div>
