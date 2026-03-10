@@ -1,12 +1,20 @@
 import { Storage } from "@plasmohq/storage"
 
-import type { AppState, ProxyError, ProxyProfile } from "./types"
+import type {
+  AppState,
+  ConnectionLogEntry,
+  ProxyError,
+  ProxyProfile
+} from "./types"
 
 const storage = new Storage({ area: "local" })
 
 const PROFILES_KEY = "profiles"
 const ACTIVE_PROFILE_ID_KEY = "activeProfileId"
 const LAST_ERROR_KEY = "lastError"
+const DEV_MODE_KEY = "devMode"
+const CONNECTION_LOGS_KEY = "connectionLogs"
+const MAX_CONNECTION_LOGS = 500
 
 /**
  * 全プロファイルを取得
@@ -45,15 +53,60 @@ export async function setLastError(
 }
 
 /**
+ * 開発者モードの状態を取得
+ */
+export async function getDevMode(): Promise<boolean> {
+  const devMode = await storage.get<boolean>(DEV_MODE_KEY)
+  return devMode ?? false
+}
+
+/**
+ * 開発者モードの状態を設定
+ */
+export async function setDevMode(enabled: boolean): Promise<void> {
+  await storage.set(DEV_MODE_KEY, enabled)
+}
+
+/**
+ * 接続ログを取得
+ */
+export async function getConnectionLogs(): Promise<ConnectionLogEntry[]> {
+  const logs = await storage.get<ConnectionLogEntry[]>(CONNECTION_LOGS_KEY)
+  return logs ?? []
+}
+
+/**
+ * 接続ログを追加
+ */
+export async function addConnectionLog(
+  entry: ConnectionLogEntry
+): Promise<void> {
+  const logs = await getConnectionLogs()
+  logs.push(entry)
+  if (logs.length > MAX_CONNECTION_LOGS) {
+    logs.splice(0, logs.length - MAX_CONNECTION_LOGS)
+  }
+  await storage.set(CONNECTION_LOGS_KEY, logs)
+}
+
+/**
+ * 接続ログをクリア
+ */
+export async function clearConnectionLogs(): Promise<void> {
+  await storage.set(CONNECTION_LOGS_KEY, [])
+}
+
+/**
  * アプリの全状態を取得
  */
 export async function getState(): Promise<AppState> {
-  const [profiles, activeProfileId, lastError] = await Promise.all([
+  const [profiles, activeProfileId, lastError, devMode] = await Promise.all([
     getProfiles(),
     getActiveProfileId(),
-    getLastError()
+    getLastError(),
+    getDevMode()
   ])
-  return { profiles, activeProfileId, lastError }
+  return { profiles, activeProfileId, lastError, devMode }
 }
 
 /**

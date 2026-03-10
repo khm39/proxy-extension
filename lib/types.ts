@@ -66,11 +66,27 @@ export interface ProxyError {
   timestamp: number
 }
 
+/** 接続ログのエントリ */
+export interface ConnectionLogEntry {
+  id: string
+  timestamp: number
+  method: string
+  url: string
+  type: string
+  statusCode?: number
+  statusLine?: string
+  ip?: string
+  fromCache: boolean
+  error?: string
+  proxyInfo?: string
+}
+
 /** アプリケーション全体の状態 */
 export interface AppState {
   activeProfileId: string | null
   profiles: ProxyProfile[]
   lastError: ProxyError | null
+  devMode: boolean
 }
 
 /** デフォルトのバイパスリスト */

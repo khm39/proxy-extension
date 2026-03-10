@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 
 import type {
   AppState,
+  ConnectionLogEntry,
   FixedServerConfig,
   ProxyProfile,
   ProxyScheme,
@@ -31,6 +32,8 @@ function createEmptyProfile(): ProxyProfile {
   }
 }
 
+type OptionsView = "profiles" | "devtools"
+
 function IndexOptions() {
   const [state, setState] = useState<AppState | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -38,15 +41,33 @@ function IndexOptions() {
     null
   )
   const [bypassInput, setBypassInput] = useState("")
+  const [currentView, setCurrentView] = useState<OptionsView>("profiles")
+  const [connectionLogs, setConnectionLogs] = useState<ConnectionLogEntry[]>(
+    []
+  )
+  const [logFilter, setLogFilter] = useState("")
 
   const fetchState = async () => {
     const result = await sendToBackground({ name: "get-state" })
     setState(result)
   }
 
+  const fetchLogs = async () => {
+    const result = await sendToBackground({ name: "get-connection-logs" })
+    setConnectionLogs(result.logs ?? [])
+  }
+
   useEffect(() => {
     fetchState()
   }, [])
+
+  useEffect(() => {
+    if (currentView === "devtools" && state?.devMode) {
+      fetchLogs()
+      const interval = setInterval(fetchLogs, 3000)
+      return () => clearInterval(interval)
+    }
+  }, [currentView, state?.devMode])
 
   const selectProfile = (profile: ProxyProfile) => {
     setSelectedId(profile.id)
@@ -160,6 +181,30 @@ function IndexOptions() {
     )
   }
 
+  const handleToggleDevMode = async () => {
+    await sendToBackground({
+      name: "toggle-dev-mode",
+      body: { enabled: !state?.devMode }
+    })
+    await fetchState()
+  }
+
+  const handleClearLogs = async () => {
+    await sendToBackground({ name: "clear-connection-logs" })
+    setConnectionLogs([])
+  }
+
+  const filteredLogs = connectionLogs
+    .filter(
+      (log) =>
+        !logFilter ||
+        log.url.toLowerCase().includes(logFilter.toLowerCase()) ||
+        log.method.toLowerCase().includes(logFilter.toLowerCase()) ||
+        log.type.toLowerCase().includes(logFilter.toLowerCase()) ||
+        (log.error && log.error.toLowerCase().includes(logFilter.toLowerCase()))
+    )
+    .reverse()
+
   if (!state) {
     return (
       <div className="options-container">
@@ -172,44 +217,159 @@ function IndexOptions() {
     <div className="options-container">
       {/* サイドバー */}
       <div className="sidebar">
-        <div className="sidebar-header">
-          <h2>プロファイル</h2>
+        <div className="sidebar-nav">
+          <button
+            className={`sidebar-nav-item ${currentView === "profiles" ? "active" : ""}`}
+            onClick={() => setCurrentView("profiles")}>
+            プロファイル
+          </button>
+          <button
+            className={`sidebar-nav-item ${currentView === "devtools" ? "active" : ""}`}
+            onClick={() => setCurrentView("devtools")}>
+            {"</>"} 開発者ツール
+          </button>
         </div>
-        <div className="sidebar-profiles">
-          {state.profiles.map((profile) => (
-            <button
-              key={profile.id}
-              className={`sidebar-item ${selectedId === profile.id ? "selected" : ""}`}
-              onClick={() => selectProfile(profile)}>
-              <span
-                className="profile-color"
-                style={{ backgroundColor: profile.color }}
-              />
-              {profile.name}
-              {state.activeProfileId === profile.id && (
-                <span style={{ color: "var(--accent)", marginLeft: "auto" }}>
-                  ●
-                </span>
+
+        {currentView === "profiles" && (
+          <>
+            <div className="sidebar-profiles">
+              {state.profiles.map((profile) => (
+                <button
+                  key={profile.id}
+                  className={`sidebar-item ${selectedId === profile.id ? "selected" : ""}`}
+                  onClick={() => selectProfile(profile)}>
+                  <span
+                    className="profile-color"
+                    style={{ backgroundColor: profile.color }}
+                  />
+                  {profile.name}
+                  {state.activeProfileId === profile.id && (
+                    <span
+                      style={{ color: "var(--accent)", marginLeft: "auto" }}>
+                      ●
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="sidebar-footer">
+              <button className="btn-primary" onClick={handleNew}>
+                + 新規プロファイル
+              </button>
+              <button className="btn-secondary" onClick={handleImport}>
+                インポート
+              </button>
+              <button className="btn-secondary" onClick={handleExport}>
+                エクスポート
+              </button>
+            </div>
+          </>
+        )}
+
+        {currentView === "devtools" && (
+          <>
+            <div className="sidebar-profiles">
+              <div className="sidebar-dev-status">
+                <span className="dev-status-label">開発者モード</span>
+                <button
+                  className={`dev-toggle ${state.devMode ? "on" : "off"}`}
+                  onClick={handleToggleDevMode}>
+                  {state.devMode ? "ON" : "OFF"}
+                </button>
+              </div>
+              {state.devMode && (
+                <div className="sidebar-dev-info">
+                  <span>ログ件数: {connectionLogs.length}</span>
+                </div>
               )}
-            </button>
-          ))}
-        </div>
-        <div className="sidebar-footer">
-          <button className="btn-primary" onClick={handleNew}>
-            + 新規プロファイル
-          </button>
-          <button className="btn-secondary" onClick={handleImport}>
-            インポート
-          </button>
-          <button className="btn-secondary" onClick={handleExport}>
-            エクスポート
-          </button>
-        </div>
+            </div>
+            <div className="sidebar-footer">
+              <button className="btn-secondary" onClick={fetchLogs}>
+                更新
+              </button>
+              <button className="btn-danger" onClick={handleClearLogs}>
+                ログをクリア
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* エディターパネル */}
       <div className="editor-panel">
-        {!editingProfile ? (
+        {currentView === "devtools" ? (
+          <div className="devtools-panel">
+            <h2>接続ログ</h2>
+            {!state.devMode ? (
+              <div className="empty-state">
+                開発者モードを有効にすると接続ログの記録が開始されます
+              </div>
+            ) : (
+              <>
+                <div className="log-toolbar">
+                  <input
+                    type="text"
+                    className="log-filter"
+                    value={logFilter}
+                    onChange={(e) => setLogFilter(e.target.value)}
+                    placeholder="URL、メソッド、タイプでフィルタ..."
+                  />
+                  <span className="log-count">
+                    {filteredLogs.length} / {connectionLogs.length} 件
+                  </span>
+                </div>
+                <div className="log-table-container">
+                  <table className="log-table">
+                    <thead>
+                      <tr>
+                        <th>時刻</th>
+                        <th>メソッド</th>
+                        <th>ステータス</th>
+                        <th>タイプ</th>
+                        <th>URL</th>
+                        <th>IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredLogs.map((log) => (
+                        <tr
+                          key={log.id}
+                          className={log.error ? "log-error" : ""}>
+                          <td className="log-time">
+                            {new Date(log.timestamp).toLocaleTimeString()}
+                          </td>
+                          <td className="log-method">{log.method}</td>
+                          <td
+                            className={`log-status ${log.statusCode && log.statusCode >= 400 ? "status-error" : ""}`}>
+                            {log.error ? (
+                              <span title={log.error}>ERR</span>
+                            ) : (
+                              log.statusCode
+                            )}
+                          </td>
+                          <td className="log-type">{log.type}</td>
+                          <td className="log-url" title={log.url}>
+                            {log.url}
+                          </td>
+                          <td className="log-ip">{log.ip ?? "-"}</td>
+                        </tr>
+                      ))}
+                      {filteredLogs.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="log-empty">
+                            {connectionLogs.length === 0
+                              ? "ログがありません"
+                              : "フィルタに一致するログがありません"}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        ) : !editingProfile ? (
           <div className="empty-state">
             プロファイルを選択するか、新規作成してください
           </div>
